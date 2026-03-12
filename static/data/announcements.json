@@ -209,9 +209,9 @@
     "isSpecial": true
   },
   {
-    "id": "ramadhan_zakat_2",
-    "startDate": "2026-03-12T18:00:00+01:00",
-    "endDate": "2026-03-13T18:10:00+01:00",
+    "id": "quran_completion_and_new_masjid_fundraiser_1",
+    "startDate": "2026-03-13T00:00:00+01:00",
+    "endDate": "2026-03-13T23:59:00+01:00",
     "type": "image",
     "displayCondition": {
       "frequency": 1,
@@ -221,7 +221,24 @@
       "rotateImages": true
     },
     "images": [
-      "/static/images/zakat.jpg"
+      "/static/images/Quran Completion.jpg"
+    ],
+    "isSpecial": true
+  },
+  {
+    "id": "quran_completion_and_new_masjid_fundraiser_2",
+    "startDate": "2026-03-15T20:30:00+01:00",
+    "endDate": "2026-03-17T22:30:00+01:00",
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/Quran Completion.jpg"
     ],
     "isSpecial": true
   },
