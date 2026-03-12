@@ -108,13 +108,16 @@ var timeModule = {
 
     // Check for fixed scheduled refreshes
     var shouldRefresh = (irishHours === 0 && irishMins === 0 && irishSecs <= 2) ||
-                       (irishHours === 3 && irishMins === 30 && irishSecs <= 2) ||
-                       (irishHours === 12 && irishMins === 30 && irishSecs <= 2) ||
-                       (irishHours === 14 && irishMins === 12 && irishSecs <= 2) ||
-                       (irishHours === 16 && irishMins === 30 && irishSecs <= 2) ||
-                       (irishHours === 17 && irishMins === 30 && irishSecs <= 2) ||
-                       (irishHours === 19 && irishMins === 45 && irishSecs <= 2) ||
-                       (irishHours === 21 && irishMins === 15 && irishSecs <= 2);
+                         (irishHours === 3 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 6 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 10 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 12 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 14 && irishMins === 12 && irishSecs <= 2) ||
+                         (irishHours === 16 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 17 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 18 && irishMins === 30 && irishSecs <= 2) ||
+                         (irishHours === 19 && irishMins === 45 && irishSecs <= 2) ||
+                         (irishHours === 21 && irishMins === 15 && irishSecs <= 2);
 
     // Check for dynamic refreshes 30 minutes before each Jamaah time
     if (!shouldRefresh && irishSecs <= 2) {
