@@ -73,6 +73,27 @@ var displayState = {
   triggeredJamaahTimes: [], // Track which jamaah times have already triggered adhkar
 };
 
+// Load triggered Jamaah times from localStorage on initialization
+(function loadTriggeredTimes() {
+  try {
+    var stored = localStorage.getItem('triggeredJamaahTimes');
+    if (stored) {
+      var data = JSON.parse(stored);
+      var today = new Date().toDateString();
+      // Only use stored data if it's from today
+      if (data.date === today) {
+        displayState.triggeredJamaahTimes = data.times || [];
+        console.log('DEBUG: Loaded triggered times from storage:', displayState.triggeredJamaahTimes);
+      } else {
+        // Clear old data
+        localStorage.removeItem('triggeredJamaahTimes');
+      }
+    }
+  } catch (e) {
+    console.error('Error loading triggered times:', e);
+  }
+})();
+
 var announcementModule = {
   // Helper function to check if a control entry is hidden
   isControlHidden: function(controlId) {
@@ -105,6 +126,12 @@ var announcementModule = {
     
     setTimeout(function() {
       displayState.triggeredJamaahTimes = [];
+      // Clear from localStorage
+      try {
+        localStorage.removeItem('triggeredJamaahTimes');
+      } catch (e) {
+        console.error('Error clearing triggered times:', e);
+      }
       console.log("DEBUG: Reset triggered Jamaah times at midnight");
       // Schedule next reset
       announcementModule.scheduleTriggeredTimesReset();
@@ -747,7 +774,32 @@ var announcementModule = {
   },
 
   // Comprehensive cleanup function to remove ALL poster elements
-  cleanupAllPosterElements: function() {
+  // Helper function to fade out an element and then remove it
+  fadeOutAndRemove: function(element, callback) {
+    if (!element || !element.parentNode) {
+      if (callback) callback();
+      return;
+    }
+
+    // Set transition if not already set
+    var currentTransition = element.style.transition;
+    if (!currentTransition || currentTransition.indexOf('opacity') === -1) {
+      element.style.transition = 'opacity 0.5s ease-in-out';
+    }
+
+    // Fade out
+    element.style.opacity = '0';
+
+    // Remove after transition completes
+    setTimeout(function() {
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      if (callback) callback();
+    }, 500); // Match the transition duration
+  },
+
+  cleanupAllPosterElements: function(callback) {
     console.log("DEBUG: Starting comprehensive cleanup of all poster elements");
     
     // Remove all possible poster container types
@@ -762,35 +814,54 @@ var announcementModule = {
       '[class*="poster"]'
     ];
 
-    var removedCount = 0;
+    var elements = [];
     containerSelectors.forEach(function(selector) {
-      var elements = document.querySelectorAll(selector);
-      elements.forEach(function(element) {
+      var found = document.querySelectorAll(selector);
+      found.forEach(function(element) {
         if (element && element.parentNode) {
-          element.parentNode.removeChild(element);
-          removedCount++;
-          console.log("DEBUG: Removed container:", selector, element.id || element.className);
+          elements.push({element: element, selector: selector});
         }
       });
     });
 
-    // Also clean up any stray image elements that might have high z-index
+    // Also collect stray image elements that might have high z-index
     var allImages = document.querySelectorAll('img[style*="z-index"]');
     allImages.forEach(function(img) {
       var zIndex = parseInt(window.getComputedStyle(img).zIndex);
       if (zIndex > 100) { // Remove images with high z-index that might be poster remnants
         if (img.parentNode) {
-          img.parentNode.removeChild(img);
-          removedCount++;
-          console.log("DEBUG: Removed high z-index image:", img.src);
+          elements.push({element: img, selector: 'high-z-index-img'});
         }
       }
     });
 
-    console.log("DEBUG: Cleanup complete, removed", removedCount, "elements");
+    if (elements.length === 0) {
+      console.log("DEBUG: Cleanup complete, no elements to remove");
+      this.showPrayerElements();
+      if (callback) callback();
+      return;
+    }
+
+    console.log("DEBUG: Found", elements.length, "elements to fade out and remove");
     
-    // Show prayer elements after cleanup
-    this.showPrayerElements();
+    var self = this;
+    var removedCount = 0;
+    var totalElements = elements.length;
+
+    // Fade out all elements
+    elements.forEach(function(item) {
+      self.fadeOutAndRemove(item.element, function() {
+        removedCount++;
+        console.log("DEBUG: Removed container:", item.selector, item.element.id || item.element.className);
+        
+        // After all elements are removed
+        if (removedCount === totalElements) {
+          console.log("DEBUG: Cleanup complete, removed", removedCount, "elements");
+          self.showPrayerElements();
+          if (callback) callback();
+        }
+      });
+    });
   },
 
 
@@ -878,24 +949,22 @@ var announcementModule = {
 
     // Set up cleanup and resumption of original content
     displayState.resumeTimeout = setTimeout(function () {
-      // Remove tafseer container
-      if (tafseerContainer.parentNode) {
-        tafseerContainer.parentNode.removeChild(tafseerContainer);
-      }
+      // Fade out and remove tafseer container
+      fadeOutAndRemove(tafseerContainer, function() {
+        // Restore prayer-times element
+        if (prayerTimesElement && originalPrayerTimesState) {
+          prayerTimesElement.className = originalPrayerTimesState.className || "";
+        }
 
-      // Restore prayer-times element
-      if (prayerTimesElement && originalPrayerTimesState) {
-        prayerTimesElement.className = originalPrayerTimesState.className || "";
-      }
+        // Restore important-times element
+        if (importantTimesElement && originalImportantTimesState) {
+          importantTimesElement.className =
+            originalImportantTimesState.className || "";
+        }
 
-      // Restore important-times element
-      if (importantTimesElement && originalImportantTimesState) {
-        importantTimesElement.className =
-          originalImportantTimesState.className || "";
-      }
-
-      // Comprehensive cleanup to ensure no poster remnants
-      announcementModule.cleanupAllPosterElements();
+        // Comprehensive cleanup to ensure no poster remnants
+        announcementModule.cleanupAllPosterElements();
+      });
     }, durationSeconds * 1000);
 
 
@@ -1113,30 +1182,29 @@ var announcementModule = {
       console.log("DEBUG: Cleaning up slideshow for image:", imagePath);
       
       try {
-        // Remove the slideshow container
-        if (imageContainer && imageContainer.parentNode) {
-          imageContainer.parentNode.removeChild(imageContainer);
-          console.log("DEBUG: Removed slideshow container");
-        }
+        // Fade out and remove the slideshow container
+        announcementModule.fadeOutAndRemove(imageContainer, function() {
+          console.log("DEBUG: Removed slideshow container with fade-out");
+          
+          // Restore the prayer-times element
+          if (prayerTimesElement && originalPrayerTimesState) {
+            prayerTimesElement.innerHTML = originalPrayerTimesState.html;
+            prayerTimesElement.className = originalPrayerTimesState.className;
+            console.log("DEBUG: Restored prayer-times element");
+          }
 
-        // Restore the prayer-times element
-        if (prayerTimesElement && originalPrayerTimesState) {
-          prayerTimesElement.innerHTML = originalPrayerTimesState.html;
-          prayerTimesElement.className = originalPrayerTimesState.className;
-          console.log("DEBUG: Restored prayer-times element");
-        }
+          // Restore the important-times element
+          if (importantTimesElement && originalImportantTimesState) {
+            importantTimesElement.innerHTML = originalImportantTimesState.html;
+            importantTimesElement.className = originalImportantTimesState.className;
+            console.log("DEBUG: Restored important-times element");
+          }
 
-        // Restore the important-times element
-        if (importantTimesElement && originalImportantTimesState) {
-          importantTimesElement.innerHTML = originalImportantTimesState.html;
-          importantTimesElement.className = originalImportantTimesState.className;
-          console.log("DEBUG: Restored important-times element");
-        }
-
-        // Comprehensive cleanup to ensure no poster remnants
-        announcementModule.cleanupAllPosterElements();
-        
-        console.log("DEBUG: Slideshow cleanup completed successfully");
+          // Comprehensive cleanup to ensure no poster remnants
+          announcementModule.cleanupAllPosterElements();
+          
+          console.log("DEBUG: Slideshow cleanup completed successfully");
+        });
       } catch (error) {
         console.error("ERROR: Exception during slideshow cleanup:", error);
         // Force cleanup even if there's an error
@@ -1295,42 +1363,42 @@ var announcementModule = {
 
     // Function to clean up slideshow and restore original elements
     var cleanupSlideshow = function (id) {
-      // Remove the slideshow container
+      // Fade out and remove the slideshow container
       var container = document.getElementById(id);
-      if (container && container.parentNode) {
-        container.parentNode.removeChild(container);
-      }
+      if (container) {
+        fadeOutAndRemove(container, function() {
+          // Restore the prayer-times and important-times elements
+          var savedState = window[id];
+          if (savedState) {
+            // Restore prayer-times
+            if (savedState.prayerTimesElement && savedState.prayerTimesState) {
+              var el = savedState.prayerTimesElement;
+              var state = savedState.prayerTimesState;
 
-      // Restore the prayer-times and important-times elements
-      var savedState = window[id];
-      if (savedState) {
-        // Restore prayer-times
-        if (savedState.prayerTimesElement && savedState.prayerTimesState) {
-          var el = savedState.prayerTimesElement;
-          var state = savedState.prayerTimesState;
+              // Remove inline display style to let CSS rules take over
+              el.style.removeProperty('display');
+              el.className = state.className || "";
+            }
 
-          // Remove inline display style to let CSS rules take over
-          el.style.removeProperty('display');
-          el.className = state.className || "";
-        }
+            // Restore important-times
+            if (
+              savedState.importantTimesElement &&
+              savedState.importantTimesState
+            ) {
+              var el = savedState.importantTimesElement;
+              var state = savedState.importantTimesState;
 
-        // Restore important-times
-        if (
-          savedState.importantTimesElement &&
-          savedState.importantTimesState
-        ) {
-          var el = savedState.importantTimesElement;
-          var state = savedState.importantTimesState;
+              // Remove inline display style to let CSS rules take over
+              el.style.removeProperty('display');
+              el.className = state.className || "";
+            }
+          }
 
-          // Remove inline display style to let CSS rules take over
-          el.style.removeProperty('display');
-          el.className = state.className || "";
-        }
-      }
-
-      // Clean up saved state
-      delete window[id];
-    };
+          // Clean up saved state
+          delete window[id];
+        }); // End fadeOutAndRemove callback
+      } // End if (container)
+    }; // End cleanupSlideshow
     // Start the slideshow
     imgElement.onload = function () {
       imgElement.style.opacity = "1";
@@ -1516,7 +1584,16 @@ var announcementModule = {
       if (currentTime >= adhkarStartTime && currentTime < adhkarEndTime) {
         // Mark this jamaah time as triggered
         displayState.triggeredJamaahTimes.push(triggerKey);
-        console.log("DEBUG: Adhkar triggered for", jamaahType, "at", adhkarStartTime, "- marked as shown");
+        // Persist to localStorage to survive page refreshes
+        try {
+          localStorage.setItem('triggeredJamaahTimes', JSON.stringify({
+            date: new Date().toDateString(),
+            times: displayState.triggeredJamaahTimes
+          }));
+        } catch (e) {
+          console.error('Error saving triggered times:', e);
+        }
+        console.log("DEBUG: Adhkar triggered for", jamaahType, "at", adhkarStartTime, "- marked as shown and persisted");
         return true;
       }
     }
@@ -1759,31 +1836,38 @@ var announcementModule = {
   showAdhkarInterleaveImage: function(config, duration) {
     var self = this;
     
-    // Remove current adhkar display temporarily
+    // Fade out and remove current adhkar display temporarily
     var adhkarContainer = document.getElementById("adhkar-display-container");
     if (adhkarContainer && adhkarContainer.parentNode) {
-      adhkarContainer.parentNode.removeChild(adhkarContainer);
+      this.fadeOutAndRemove(adhkarContainer, function() {
+        // After fade out, continue with showing the image
+        proceedWithImage();
+      });
+    } else {
+      proceedWithImage();
     }
 
-    // Get active announcement images
-    var activeDynamicAnnouncement = this.getActiveDynamicAnnouncement(new Date());
-    if (activeDynamicAnnouncement && activeDynamicAnnouncement.imageAnnouncement) {
-      var images = activeDynamicAnnouncement.imageAnnouncement.images;
-      if (images && images.length > 0) {
-        // Pick a random image
-        var randomImage = images[Math.floor(Math.random() * images.length)];
-        
-        // Show the image briefly (convert milliseconds to seconds)
-        this.displayAdhkarInterleaveImage(randomImage, duration / 1000, function() {
-          // After image, continue with next Adhkar cycle
-          self.showAdhkarPage(config);
-        });
-        return;
+    function proceedWithImage() {
+      // Get active announcement images
+      var activeDynamicAnnouncement = self.getActiveDynamicAnnouncement(new Date());
+      if (activeDynamicAnnouncement && activeDynamicAnnouncement.imageAnnouncement) {
+        var images = activeDynamicAnnouncement.imageAnnouncement.images;
+        if (images && images.length > 0) {
+          // Pick a random image
+          var randomImage = images[Math.floor(Math.random() * images.length)];
+          
+          // Show the image briefly (convert milliseconds to seconds)
+          self.displayAdhkarInterleaveImage(randomImage, duration / 1000, function() {
+            // After image, continue with next Adhkar cycle
+            self.showAdhkarPage(config);
+          });
+          return;
+        }
       }
+      
+      // No image available, continue immediately
+      self.showAdhkarPage(config);
     }
-    
-    // No image available, continue immediately
-    this.showAdhkarPage(config);
   },
 
   // Display a single image for specified duration (used for Adhkar interleaving)
@@ -1836,14 +1920,13 @@ var announcementModule = {
 
     // Cleanup after duration
     setTimeout(function() {
-      if (imageContainer && imageContainer.parentNode) {
-        imageContainer.parentNode.removeChild(imageContainer);
-      }
-      
-      // Comprehensive cleanup to ensure no poster remnants
-      announcementModule.cleanupAllPosterElements();
-      
-      if (callback) callback();
+      // Fade out and remove the adhkar interleave image
+      fadeOutAndRemove(imageContainer, function() {
+        // Comprehensive cleanup to ensure no poster remnants
+        announcementModule.cleanupAllPosterElements();
+        
+        if (callback) callback();
+      });
     }, durationSeconds * 1000);
   },
 
@@ -2081,9 +2164,10 @@ var announcementModule = {
         parent: existingSlideshow.parentNode,
       };
 
-      if (existingSlideshow.parentNode) {
-        existingSlideshow.parentNode.removeChild(existingSlideshow);
-      }
+      // Fade out before removing
+      fadeOutAndRemove(existingSlideshow, function() {
+        // No additional callback needed
+      });
     }
 
     // Clear any existing resume timeout
@@ -2105,48 +2189,57 @@ var announcementModule = {
 
   // Clean up Adhkar display and restore normal content
   cleanupAdhkarDisplay: function () {
+    var self = this;
+    
     // Clear timeouts
     if (displayState.adhkarPageTimeout) {
       clearTimeout(displayState.adhkarPageTimeout);
       displayState.adhkarPageTimeout = null;
     }
 
-    // Remove adhkar container
+    // Fade out and remove adhkar container
     var adhkarContainer = document.getElementById("adhkar-display-container");
     if (adhkarContainer && adhkarContainer.parentNode) {
-      adhkarContainer.parentNode.removeChild(adhkarContainer);
+      this.fadeOutAndRemove(adhkarContainer, function() {
+        // Restore elements after fade-out completes
+        restoreElements();
+      });
+    } else {
+      restoreElements();
     }
 
-    // Countdown will be removed with the adhkar container
-    // No separate cleanup needed since it's a child of adhkarContainer
+    function restoreElements() {
+      // Countdown will be removed with the adhkar container
+      // No separate cleanup needed since it's a child of adhkarContainer
 
-    // Restore prayer-times element
-    if (displayState.prayerTimesElement && displayState.originalPrayerTimesState) {
-      displayState.prayerTimesElement.className = displayState.originalPrayerTimesState.className || "";
+      // Restore prayer-times element
+      if (displayState.prayerTimesElement && displayState.originalPrayerTimesState) {
+        displayState.prayerTimesElement.className = displayState.originalPrayerTimesState.className || "";
+      }
+
+      // Restore important-times element
+      if (displayState.importantTimesElement && displayState.originalImportantTimesState) {
+        displayState.importantTimesElement.className = displayState.originalImportantTimesState.className || "";
+      }
+
+      // Show both elements together using helper function
+      self.showPrayerElements();
+
+      // Resume any paused announcements/images
+      self.resumePausedAnnouncements();
+
+      // Reset adhkar state
+      displayState.adhkarActive = false;
+      displayState.adhkarConfig = null;
+      displayState.adhkarCurrentPage = 0;
+      displayState.adhkarCurrentCycle = 0;
+      displayState.adhkarTotalPages = 0;
+      displayState.adhkarTotalCycles = 0;
+      displayState.originalPrayerTimesState = null;
+      displayState.originalImportantTimesState = null;
+      displayState.prayerTimesElement = null;
+      displayState.importantTimesElement = null;
     }
-
-    // Restore important-times element
-    if (displayState.importantTimesElement && displayState.originalImportantTimesState) {
-      displayState.importantTimesElement.className = displayState.originalImportantTimesState.className || "";
-    }
-
-    // Show both elements together using helper function
-    this.showPrayerElements();
-
-    // Resume any paused announcements/images
-    this.resumePausedAnnouncements();
-
-    // Reset adhkar state
-    displayState.adhkarActive = false;
-    displayState.adhkarConfig = null;
-    displayState.adhkarCurrentPage = 0;
-    displayState.adhkarCurrentCycle = 0;
-    displayState.adhkarTotalPages = 0;
-    displayState.adhkarTotalCycles = 0;
-    displayState.originalPrayerTimesState = null;
-    displayState.originalImportantTimesState = null;
-    displayState.prayerTimesElement = null;
-    displayState.importantTimesElement = null;
   },
 
   // ===== END ADHKAR FUNCTIONALITY =====
