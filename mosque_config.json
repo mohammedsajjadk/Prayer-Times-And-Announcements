@@ -1,0 +1,54 @@
+{
+  "mosque": {
+    "name": "Tralee Masjid",
+    "location": "Tralee, Ireland",
+    "displayName": "Tralee Masjid"
+  },
+  "timezone": {
+    "name": "Europe/Dublin",
+    "hasDST": true,
+    "dstRules": {
+      "description": "Ireland DST: Last Sunday in March to last Sunday in October",
+      "startMonth": 3,
+      "startRule": "lastSunday",
+      "endMonth": 10,
+      "endRule": "lastSunday"
+    },
+    "standardOffset": 0,
+    "dstOffset": 1
+  },
+  "jumuah": {
+    "summer": {
+      "time": "13:45",
+      "description": "Jumuah time during Irish Summer Time"
+    },
+    "winter": {
+      "time": "13:20",
+      "description": "Jumuah time during Irish Winter Time"
+    }
+  },
+  "adhkar": {
+    "enabled": true,
+    "posterPath": "/static/images/Adhkar.jpg",
+    "displayAfterJamaah": true,
+    "delayMinutes": 8,
+    "durationMinutes": 4,
+    "fridayZohrSpecialTimes": {
+      "summer": "14:10",
+      "winter": "13:42"
+    },
+    "excludeFridayZohr": false
+  },
+  "display": {
+    "title": "Prayer Times",
+    "showIslamicDate": true,
+    "showGregorianDate": true,
+    "defaultTheme": "theme1",
+    "availableThemes": ["theme1", "theme2", "theme3", "theme4", "theme5"]
+  },
+  "defaults": {
+    "announcementDuration": 60,
+    "imageDuration": 60,
+    "avoidJamaahTime": true
+  }
+}

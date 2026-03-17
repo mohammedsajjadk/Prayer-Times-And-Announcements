@@ -61,38 +61,8 @@ var dynamicAnnouncements = []; // Initialize as empty array to avoid undefined e
 // Track announcement display states
 var displayState = {
   pausedAnnouncement: null,
-  resumeTimeout: null,
-  adhkarActive: false,
-  adhkarText: null,
-  adhkarConfig: null,
-  adhkarCurrentPage: 0,
-  adhkarCurrentCycle: 0,
-  adhkarPageTimeout: null,
-  adhkarTotalPages: 0,
-  adhkarTotalCycles: 0,
-  triggeredJamaahTimes: [], // Track which jamaah times have already triggered adhkar
+  resumeTimeout: null
 };
-
-// Load triggered Jamaah times from localStorage on initialization
-(function loadTriggeredTimes() {
-  try {
-    var stored = localStorage.getItem('triggeredJamaahTimes');
-    if (stored) {
-      var data = JSON.parse(stored);
-      var today = new Date().toDateString();
-      // Only use stored data if it's from today
-      if (data.date === today) {
-        displayState.triggeredJamaahTimes = data.times || [];
-        console.log('DEBUG: Loaded triggered times from storage:', displayState.triggeredJamaahTimes);
-      } else {
-        // Clear old data
-        localStorage.removeItem('triggeredJamaahTimes');
-      }
-    }
-  } catch (e) {
-    console.error('Error loading triggered times:', e);
-  }
-})();
 
 var announcementModule = {
   // Helper function to check if a control entry is hidden
@@ -114,28 +84,6 @@ var announcementModule = {
 
     // Set up periodic refresh of dynamic announcements (e.g., every hour)
     setInterval(this.loadDynamicAnnouncements.bind(this), 60 * 60 * 1000);
-    
-    // Reset triggered jamaah times at midnight each day
-    this.scheduleTriggeredTimesReset();
-  },
-  
-  scheduleTriggeredTimesReset: function() {
-    var now = new Date();
-    var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-    var timeUntilMidnight = tomorrow - now;
-    
-    setTimeout(function() {
-      displayState.triggeredJamaahTimes = [];
-      // Clear from localStorage
-      try {
-        localStorage.removeItem('triggeredJamaahTimes');
-      } catch (e) {
-        console.error('Error clearing triggered times:', e);
-      }
-      console.log("DEBUG: Reset triggered Jamaah times at midnight");
-      // Schedule next reset
-      announcementModule.scheduleTriggeredTimesReset();
-    }, timeUntilMidnight);
   },
 
   // Load dynamic announcements from external file
@@ -485,23 +433,36 @@ var announcementModule = {
     var isSpecialAnnouncement = false;
     var imageData = null;
 
-    // First check if Adhkar should be displayed - this takes priority
-    var adhkarDisplay = this.handleAdhkarDisplay(
-      currentTime,
-      dayOfWeek,
-      isIrishSummerTime,
-      {
-        fajrJamaah: fajrJamaahTime,
-        zohrJamaah: zohrJamaahTime,
-        asrJamaah: asrJamaahTime,
-        magribJamaah: magribJamaahTime,
-        ishaJamaah: ishaJamaahTime,
-      }
-    );
-
-    if (adhkarDisplay.shouldDisplay) {
-      // If Adhkar should be displayed, it takes priority
-      return;
+    // Check if we should display Adhkar poster
+    var adhkarPosterCheck = this.checkAdhkarPoster(currentTime, dayOfWeek, isIrishSummerTime, {
+      fajrJamaah: fajrJamaahTime,
+      zohrJamaah: zohrJamaahTime,
+      asrJamaah: asrJamaahTime,
+      magribJamaah: magribJamaahTime,
+      ishaJamaah: ishaJamaahTime
+    });
+    
+    if (adhkarPosterCheck.shouldDisplay) {
+      // Display Adhkar poster
+      imageData = {
+        images: ['/static/images/Adhkar.jpg'],
+        displayCondition: {
+          frequency: 1,
+          duration: 60,
+          avoidJamaahTime: false
+        },
+        isSpecial: true,
+        schedule: [{
+          imagePath: '/static/images/Adhkar.jpg',
+          frequency: 1,
+          duration: 60,
+          avoidJamaahTime: false,
+          announcementId: 'adhkar_poster'
+        }],
+        gapDuration: 0,
+        totalActiveTime: 60,
+        totalCycleTime: 120
+      };
     }
 
     // Check for any dynamic announcements
@@ -666,51 +627,11 @@ var announcementModule = {
   ensureElementsVisible: function () {
     console.log("DEBUG: ensureElementsVisible called - checking for active overlays");
     
-    // Check if Adhkar is active
-    if (displayState.adhkarActive) {
-      // Special check for Friday - force clear stuck Adhkar
-      var now = testMode.enabled ? testMode.getMockDate() : new Date();
-      var currentDay = testMode.enabled ? testMode.dayOfWeek : now.getUTCDay();
-      if (!testMode.enabled) {
-        var isIrishSummerTime = dateUtils.isIrelandDST(now);
-        var irishOffset = isIrishSummerTime ? 1 : 0;
-        var irishHours = now.getUTCHours() + irishOffset;
-        if (irishHours < now.getUTCHours()) {
-          currentDay = (currentDay + 1) % 7;
-        }
-      }
-      
-      if (currentDay === 5) { // Friday
-        console.log("WARNING: Adhkar is active on Friday but should be excluded - force clearing");
-        this.cleanupAdhkarDisplay();
-        displayState.adhkarActive = false;
-        this.cleanupAllPosterElements();
-        return;
-      }
-      
-      console.log("DEBUG: Adhkar is active, elements should be hidden");
-      return; // Adhkar should be showing, elements should be hidden
-    }
-
     // Check if any image slideshow is active
     var activeSlideshow = document.querySelector(".image-slideshow-container");
     if (activeSlideshow) {
       console.log("DEBUG: Image slideshow is active, elements should be hidden");
       return; // Image is showing, elements should be hidden
-    }
-
-    // Check if any adhkar interleave image is active
-    var activeAdhkarImage = document.querySelector(".adhkar-interleave-image-container");
-    if (activeAdhkarImage) {
-      console.log("DEBUG: Adhkar interleave image is active, elements should be hidden");
-      return; // Adhkar image is showing, elements should be hidden
-    }
-
-    // Check if any adhkar text display is active
-    var activeAdhkarText = document.getElementById("adhkar-display-container");
-    if (activeAdhkarText) {
-      console.log("DEBUG: Adhkar text display is active, elements should be hidden");
-      return; // Adhkar text is showing, elements should be hidden
     }
 
     // No overlays active - ensure clean state and both elements visible
@@ -805,9 +726,7 @@ var announcementModule = {
     // Remove all possible poster container types
     var containerSelectors = [
       '.image-slideshow-container',
-      '.adhkar-interleave-image-container', 
       '.tafseer-display-container',
-      '#adhkar-display-container',
       '[id^="single-image-"]',
       '[id^="slideshow-"]',
       '[class*="image-container"]',
@@ -972,13 +891,6 @@ var announcementModule = {
 
   // Handle sequential image announcements with gaps and cycle timing
   handleImageAnnouncement: function (imageData, currentTime, jamaahTimes) {
-    console.log("DEBUG: handleImageAnnouncement started - displayState.adhkarActive:", displayState.adhkarActive);
-    // Don't process if Adhkar is active
-    if (displayState.adhkarActive) {
-      console.log("DEBUG: Exiting handleImageAnnouncement because Adhkar is active");
-      return;
-    }
-
     // Check if we have a rotation schedule
     console.log("DEBUG: Checking schedule - exists:", !!imageData.schedule, "isArray:", Array.isArray(imageData.schedule), "length:", imageData.schedule ? imageData.schedule.length : 'N/A');
     if (!imageData.schedule || !Array.isArray(imageData.schedule) || imageData.schedule.length === 0) {
@@ -1459,790 +1371,54 @@ var announcementModule = {
     }, 25000);
   },
 
-  // ===== ADHKAR FUNCTIONALITY =====
-
-  // Handle Adhkar display logic
-  handleAdhkarDisplay: function (currentTime, dayOfWeek, isIrishSummerTime, jamaahTimes) {
+  // Check if Adhkar poster should be displayed
+  checkAdhkarPoster: function(currentTime, dayOfWeek, isIrishSummerTime, jamaahTimes) {
     var result = { shouldDisplay: false };
-
-    console.log("Adhkar Debug - Current time:", currentTime, "Day:", dayOfWeek, "Summer time:", isIrishSummerTime);
-    console.log("Adhkar Debug - Jamaah times:", jamaahTimes);
-
-    // If Adhkar is already active, don't check again
-    if (displayState.adhkarActive) {
-      console.log("Adhkar Debug - Already active, skipping");
-      return result;
-    }
-
-    // Get Adhkar announcements sorted by rank
-    var adhkarAnnouncements = this.getAdhkarAnnouncements();
-    console.log("Adhkar Debug - Found announcements:", adhkarAnnouncements.length);
-    if (!adhkarAnnouncements || adhkarAnnouncements.length === 0) {
-      return result;
-    }
-
-    // Check each Adhkar configuration in order of rank
-    for (var i = 0; i < adhkarAnnouncements.length; i++) {
-      var adhkarConfig = adhkarAnnouncements[i];
+    
+    // For Friday Zohr: display at specific times
+    if (dayOfWeek === 5) { // Friday
+      var fridayZohrTime = isIrishSummerTime ? timeUtils.timeToMinutes("14:10") : timeUtils.timeToMinutes("13:42");
+      var fridayZohrEndTime = fridayZohrTime + 4; // Display for 4 minutes
       
-      if (!adhkarConfig.enabled) continue;
-
-      var shouldShow = false;
-
-      // Check trigger conditions
-      if (adhkarConfig.trigger.type === "post_jamaah") {
-        shouldShow = this.checkPostJamaahTrigger(adhkarConfig, currentTime, jamaahTimes, dayOfWeek);
-      } else if (adhkarConfig.trigger.type === "dst_schedule") {
-        shouldShow = this.checkDSTScheduleTrigger(adhkarConfig, currentTime, dayOfWeek, isIrishSummerTime);
-      }
-
-      if (shouldShow) {
-        this.displayAdhkarText(adhkarConfig);
+      if (currentTime >= fridayZohrTime && currentTime < fridayZohrEndTime) {
         result.shouldDisplay = true;
         return result;
       }
     }
-
+    
+    // For other prayers: display Jamaah + 8 minutes
+    var adhkarDelay = 8; // minutes after Jamaah
+    var adhkarDuration = 4; // minutes to display
+    
+    var jamaahList = [
+      { name: 'fajrJamaah', time: jamaahTimes.fajrJamaah, excludeFriday: false },
+      { name: 'zohrJamaah', time: jamaahTimes.zohrJamaah, excludeFriday: true }, // Excluded on Friday
+      { name: 'asrJamaah', time: jamaahTimes.asrJamaah, excludeFriday: false },
+      { name: 'magribJamaah', time: jamaahTimes.magribJamaah, excludeFriday: false },
+      { name: 'ishaJamaah', time: jamaahTimes.ishaJamaah, excludeFriday: false }
+    ];
+    
+    for (var i = 0; i < jamaahList.length; i++) {
+      var jamaah = jamaahList[i];
+      
+      // Skip Friday Zohr (already handled above)
+      if (dayOfWeek === 5 && jamaah.excludeFriday) {
+        continue;
+      }
+      
+      if (jamaah.time && !isNaN(jamaah.time)) {
+        var adhkarStartTime = jamaah.time + adhkarDelay;
+        var adhkarEndTime = adhkarStartTime + adhkarDuration;
+        
+        if (currentTime >= adhkarStartTime && currentTime < adhkarEndTime) {
+          result.shouldDisplay = true;
+          return result;
+        }
+      }
+    }
+    
     return result;
-  },
-
-  // Get Adhkar announcements sorted by rank
-  getAdhkarAnnouncements: function () {
-    if (!dynamicAnnouncements || !Array.isArray(dynamicAnnouncements)) {
-      return [];
-    }
-
-    return dynamicAnnouncements
-      .filter(function(announcement) {
-        return announcement.type === "adhkar_text";
-      })
-      .sort(function(a, b) {
-        return (a.rank || 999) - (b.rank || 999);
-      });
-  },
-
-  // Check if post-jamaah trigger conditions are met
-  checkPostJamaahTrigger: function (config, currentTime, jamaahTimes, dayOfWeek) {
-    if (!config.trigger.applyToAllJamaah) {
-      return false;
-    }
-
-    var delayMinutes = config.trigger.delayMinutes !== undefined ? config.trigger.delayMinutes : 8;
-    var jamaahTypes = config.trigger.jamaahTypes || [];
-    var excludeFridayZohr = config.trigger.excludeFridayZohr || false;
-    var excludeFriday = config.trigger.excludeFriday || false;
-
-    // Check for complete Friday exclusion
-    if (excludeFriday && dayOfWeek === 5) {
-      console.log("DEBUG: Friday exclusion applied - no Adhkar on Friday");
-      return false;
-    }
-
-    for (var i = 0; i < jamaahTypes.length; i++) {
-      var jamaahType = jamaahTypes[i];
-      var jamaahTime = jamaahTimes[jamaahType];
-
-      // Check for Friday Zohr exclusion
-      if (excludeFridayZohr && jamaahType === "zohrJamaah" && dayOfWeek === 5) {
-        continue;
-      }
-
-      if (!jamaahTime || isNaN(jamaahTime)) {
-        continue;
-      }
-
-      var adhkarStartTime = jamaahTime + delayMinutes;
-      
-      // Check if we've already triggered for this jamaah time today
-      var triggerKey = jamaahType + "_" + Math.floor(adhkarStartTime);
-      if (displayState.triggeredJamaahTimes.indexOf(triggerKey) !== -1) {
-        // Already triggered for this jamaah time, skip
-        continue;
-      }
-
-      // Calculate duration - use pageTimings if available, otherwise fallback to totalDurationMinutes
-      var totalDuration = 5; // default fallback
-      if (config.display.pageTimings && Array.isArray(config.display.pageTimings)) {
-        // Sum up all page timings
-        totalDuration = 0;
-        for (var j = 0; j < config.display.pageTimings.length; j++) {
-          var timing = config.display.pageTimings[j];
-          // Parse timing - could be "1:30" (minutes:seconds) or just "2" (minutes)
-          if (typeof timing === 'string' && timing.includes(':')) {
-            var parts = timing.split(':');
-            totalDuration += parseInt(parts[0]) + (parseInt(parts[1]) / 60);
-          } else {
-            totalDuration += parseFloat(timing);
-          }
-        }
-      } else if (config.display.totalDurationMinutes) {
-        totalDuration = config.display.totalDurationMinutes;
-      }
-
-      var adhkarEndTime = adhkarStartTime + totalDuration;
-
-      if (currentTime >= adhkarStartTime && currentTime < adhkarEndTime) {
-        // Mark this jamaah time as triggered
-        displayState.triggeredJamaahTimes.push(triggerKey);
-        // Persist to localStorage to survive page refreshes
-        try {
-          localStorage.setItem('triggeredJamaahTimes', JSON.stringify({
-            date: new Date().toDateString(),
-            times: displayState.triggeredJamaahTimes
-          }));
-        } catch (e) {
-          console.error('Error saving triggered times:', e);
-        }
-        console.log("DEBUG: Adhkar triggered for", jamaahType, "at", adhkarStartTime, "- marked as shown and persisted");
-        return true;
-      }
-    }
-
-    return false;
-  },
-
-  // Check if DST schedule trigger conditions are met
-  checkDSTScheduleTrigger: function (config, currentTime, dayOfWeek, isIrishSummerTime) {
-    var trigger = config.trigger;
-    
-    console.log("DST Trigger Debug - Config:", config.id, "DST Type:", trigger.dstType, "Current Summer Time:", isIrishSummerTime);
-    
-    // Check if it's the right DST period
-    if (trigger.dstType === "forward" && !isIrishSummerTime) {
-      console.log("DST Trigger Debug - Wrong DST period (expected forward, got winter)");
-      return false;
-    }
-    if (trigger.dstType === "backward" && isIrishSummerTime) {
-      console.log("DST Trigger Debug - Wrong DST period (expected backward, got summer)");
-      return false;
-    }
-
-    // Get the scheduled time
-    var scheduledTime;
-    if (isIrishSummerTime && config.seasonalTiming && config.seasonalTiming.summer) {
-      scheduledTime = config.seasonalTiming.summer.startTime;
-    } else if (!isIrishSummerTime && config.seasonalTiming && config.seasonalTiming.winter) {
-      scheduledTime = config.seasonalTiming.winter.startTime;
-    } else {
-      scheduledTime = trigger.startTime;
-    }
-
-    var startTimeMinutes = timeUtils.timeToMinutes(scheduledTime);
-    
-    // Calculate total duration - use pageTimings if available, otherwise fallback to totalDurationMinutes or durationMinutes
-    var totalDuration = 5; // default fallback
-    if (config.display.pageTimings && Array.isArray(config.display.pageTimings)) {
-      // Sum up all page timings
-      totalDuration = 0;
-      for (var j = 0; j < config.display.pageTimings.length; j++) {
-        var timing = config.display.pageTimings[j];
-        // Parse timing - could be "1:30" (minutes:seconds) or just "2" (minutes)
-        if (typeof timing === 'string' && timing.includes(':')) {
-          var parts = timing.split(':');
-          totalDuration += parseInt(parts[0]) + (parseInt(parts[1]) / 60);
-        } else {
-          totalDuration += parseFloat(timing);
-        }
-      }
-    } else if (trigger.durationMinutes) {
-      totalDuration = trigger.durationMinutes;
-    } else if (config.display.totalDurationMinutes) {
-      totalDuration = config.display.totalDurationMinutes;
-    }
-    
-    var endTimeMinutes = startTimeMinutes + totalDuration;
-
-    console.log("DST Trigger Debug - Scheduled time:", scheduledTime, "Start minutes:", startTimeMinutes, "End minutes:", endTimeMinutes, "Current:", currentTime);
-
-    var shouldTrigger = currentTime >= startTimeMinutes && currentTime < endTimeMinutes;
-    console.log("DST Trigger Debug - Should trigger:", shouldTrigger);
-    
-    return shouldTrigger;
-  },
-
-  // Load and display Adhkar text
-  displayAdhkarText: function (config) {
-    var self = this;
-    
-    // Set adhkar as active
-    displayState.adhkarActive = true;
-    displayState.adhkarConfig = config;
-    displayState.adhkarCurrentPage = 0;
-
-    // Clear any existing timeout
-    if (displayState.adhkarPageTimeout) {
-      clearTimeout(displayState.adhkarPageTimeout);
-    }
-
-    // Pause any ongoing announcements/images if configured
-    if (config.display.takesOverImages) {
-      this.pauseOngoingAnnouncements();
-    }
-
-    // Initialize cycle tracking
-    displayState.adhkarCurrentPage = 0;
-    displayState.adhkarCurrentCycle = 0;
-    displayState.adhkarTotalPages = config.display.pageCount || 1;
-    displayState.adhkarTotalCycles = config.display.repeatCycles || 1;
-
-    // Load the text file if not already loaded
-    if (!displayState.adhkarText) {
-      fetch(config.textFile)
-        .then(function(response) {
-          if (!response.ok) {
-            throw new Error("Failed to load adhkar text: " + response.status);
-          }
-          return response.text();
-        })
-        .then(function(text) {
-          displayState.adhkarText = text;
-          self.showAdhkarPage(config);
-        })
-        .catch(function(error) {
-          console.error("Error loading adhkar text:", error);
-          self.cleanupAdhkarDisplay();
-        });
-    } else {
-      this.showAdhkarPage(config);
-    }
-  },
-
-  // Distribute verses across pages based on percentage, respecting verse boundaries
-  distributeVersesAcrossPages: function(verses, pageDistribution) {
-    var totalVerses = verses.length;
-    var pages = [];
-    var currentVerseIndex = 0;
-    
-    for (var i = 0; i < pageDistribution.length; i++) {
-      var percentage = pageDistribution[i];
-      var targetVerseCount = Math.round((percentage / 100) * totalVerses);
-      
-      // Ensure we at least get 1 verse if there are verses left
-      if (targetVerseCount === 0 && currentVerseIndex < totalVerses) {
-        targetVerseCount = 1;
-      }
-      
-      // Calculate end index, but don't exceed total verses
-      var endIndex = Math.min(currentVerseIndex + targetVerseCount, totalVerses);
-      
-      // For last page, include all remaining verses
-      if (i === pageDistribution.length - 1) {
-        endIndex = totalVerses;
-      }
-      
-      // Extract verses for this page
-      var pageVerses = verses.slice(currentVerseIndex, endIndex);
-      pages.push(pageVerses);
-      
-      // Move to next starting point
-      currentVerseIndex = endIndex;
-    }
-    
-    return pages;
-  },
-
-  // Show a specific page of Adhkar text
-  showAdhkarPage: function (config) {
-    var display = config.display;
-    var pageCount = display.pageCount || 1;
-    var pageDistribution = display.pageDistribution || [100];
-    var currentPage = displayState.adhkarCurrentPage;
-
-    // Split text into verses using <br> as separator
-    var fullText = displayState.adhkarText;
-    var verses = fullText.split('<br>').filter(function(verse) {
-      return verse.trim().length > 0;
-    });
-
-    // Distribute verses across pages based on percentage, respecting verse boundaries
-    var pageVerses = this.distributeVersesAcrossPages(verses, pageDistribution);
-    
-    // Get verses for current page
-    var currentPageVerses = pageVerses[currentPage] || [];
-    var pageText = currentPageVerses.join('<br>');
-
-    // Create and show the display
-    var totalCycles = displayState.adhkarTotalCycles;
-    var currentCycle = displayState.adhkarCurrentCycle;
-    this.renderAdhkarDisplay(pageText, config, currentPage, pageCount, currentCycle, totalCycles);
-
-    // Calculate timing with new pageTimings system
-    var showImagesBetweenCycles = display.showImagesBetweenCycles !== false;
-    
-    // Calculate current page duration from pageTimings array
-    var currentPageDuration;
-    if (display.pageTimings && Array.isArray(display.pageTimings) && display.pageTimings[currentPage]) {
-      var timing = display.pageTimings[currentPage];
-      // Parse timing - could be "1:30" (minutes:seconds) or just "2" (minutes)
-      if (typeof timing === 'string' && timing.includes(':')) {
-        var parts = timing.split(':');
-        currentPageDuration = (parseInt(parts[0]) * 60 + parseInt(parts[1])) * 1000; // Convert to milliseconds
-      } else {
-        currentPageDuration = parseFloat(timing) * 60 * 1000; // Convert minutes to milliseconds
-      }
-    } else {
-      // Fallback to old system for backward compatibility
-      var totalDuration = (display.totalDurationMinutes || 5) * 60 * 1000; // Convert to milliseconds
-      var imageSlots = showImagesBetweenCycles ? (totalCycles - 1) : 0;
-      var totalSlots = (pageCount * totalCycles) + imageSlots;
-      currentPageDuration = totalDuration / totalSlots;
-    }
-
-    var self = this;
-    
-    // Determine what to show next
-    displayState.adhkarPageTimeout = setTimeout(function() {
-      displayState.adhkarCurrentPage++;
-      
-      // Check if we finished current cycle
-      if (displayState.adhkarCurrentPage >= pageCount) {
-        displayState.adhkarCurrentPage = 0;
-        displayState.adhkarCurrentCycle++;
-        
-        // Check if we should show image between cycles
-        if (displayState.adhkarCurrentCycle < totalCycles && showImagesBetweenCycles) {
-          // For image duration, use a fixed 3 seconds or calculate from pageTimings average
-          var imageDuration = 3000; // 3 seconds default
-          if (display.pageTimings && Array.isArray(display.pageTimings)) {
-            // Use average of page timings for image display
-            var totalTime = 0;
-            for (var k = 0; k < display.pageTimings.length; k++) {
-              var timing = display.pageTimings[k];
-              if (typeof timing === 'string' && timing.includes(':')) {
-                var parts = timing.split(':');
-                totalTime += (parseInt(parts[0]) * 60 + parseInt(parts[1]));
-              } else {
-                totalTime += parseFloat(timing) * 60;
-              }
-            }
-            imageDuration = (totalTime / display.pageTimings.length) * 1000; // Convert average to milliseconds
-          }
-          // Show announcement image, then continue
-          self.showAdhkarInterleaveImage(config, imageDuration);
-          return;
-        }
-      }
-      
-      // Check if we finished all cycles
-      if (displayState.adhkarCurrentCycle >= totalCycles) {
-        announcementModule.cleanupAdhkarDisplay();
-      } else {
-        announcementModule.showAdhkarPage(config);
-      }
-    }, currentPageDuration);
-  },
-
-  // Show announcement image between Adhkar cycles
-  showAdhkarInterleaveImage: function(config, duration) {
-    var self = this;
-    
-    // Fade out and remove current adhkar display temporarily
-    var adhkarContainer = document.getElementById("adhkar-display-container");
-    if (adhkarContainer && adhkarContainer.parentNode) {
-      this.fadeOutAndRemove(adhkarContainer, function() {
-        // After fade out, continue with showing the image
-        proceedWithImage();
-      });
-    } else {
-      proceedWithImage();
-    }
-
-    function proceedWithImage() {
-      // Get active announcement images
-      var activeDynamicAnnouncement = self.getActiveDynamicAnnouncement(new Date());
-      if (activeDynamicAnnouncement && activeDynamicAnnouncement.imageAnnouncement) {
-        var images = activeDynamicAnnouncement.imageAnnouncement.images;
-        if (images && images.length > 0) {
-          // Pick a random image
-          var randomImage = images[Math.floor(Math.random() * images.length)];
-          
-          // Show the image briefly (convert milliseconds to seconds)
-          self.displayAdhkarInterleaveImage(randomImage, duration / 1000, function() {
-            // After image, continue with next Adhkar cycle
-            self.showAdhkarPage(config);
-          });
-          return;
-        }
-      }
-      
-      // No image available, continue immediately
-      self.showAdhkarPage(config);
-    }
-  },
-
-  // Display a single image for specified duration (used for Adhkar interleaving)
-  displayAdhkarInterleaveImage: function(imagePath, durationSeconds, callback) {
-    // Check if there's already an adhkar interleave image running
-    var existingAdhkarImage = document.querySelector(".adhkar-interleave-image-container");
-    if (existingAdhkarImage) {
-      // Already displaying an adhkar interleave image, don't start another
-      if (callback) callback();
-      return;
-    }
-
-    var prayerTimesElement = document.querySelector(".prayer-times");
-    var importantTimesElement = document.querySelector(".important-times");
-
-    // Hide both prayer elements together
-    this.hidePrayerElements();
-
-    // Create image container
-    var imageContainer = document.createElement("div");
-    imageContainer.className = "adhkar-interleave-image-container";
-    imageContainer.style.width = "100%";
-    imageContainer.style.height = "132vh";
-    imageContainer.style.display = "flex";
-    imageContainer.style.justifyContent = "center";
-    imageContainer.style.alignItems = "center";
-    imageContainer.style.marginTop = "1.0vw";
-
-    // Create image element
-    var imgElement = document.createElement("img");
-    imgElement.src = imagePath;
-    imgElement.style.maxWidth = "90%";
-    imgElement.style.height = "auto";
-    imgElement.style.opacity = "0";
-    imgElement.style.transition = "opacity 0.5s ease-in-out";
-
-    imageContainer.appendChild(imgElement);
-
-    // Insert container
-    if (prayerTimesElement && prayerTimesElement.parentNode) {
-      prayerTimesElement.parentNode.insertBefore(imageContainer, prayerTimesElement);
-    } else {
-      document.body.appendChild(imageContainer);
-    }
-
-    // Fade in
-    setTimeout(function() {
-      imgElement.style.opacity = "1";
-    }, 100);
-
-    // Cleanup after duration
-    setTimeout(function() {
-      // Fade out and remove the adhkar interleave image
-      fadeOutAndRemove(imageContainer, function() {
-        // Comprehensive cleanup to ensure no poster remnants
-        announcementModule.cleanupAllPosterElements();
-        
-        if (callback) callback();
-      });
-    }, durationSeconds * 1000);
-  },
-
-  // Render the Adhkar display on screen
-  renderAdhkarDisplay: function (text, config, currentPage, totalPages, currentCycle, totalCycles) {
-    currentCycle = currentCycle || 0;
-    totalCycles = totalCycles || 1;
-    
-    // First, remove any existing adhkar container to prevent stacking
-    var existingContainer = document.getElementById("adhkar-display-container");
-    if (existingContainer && existingContainer.parentNode) {
-      existingContainer.parentNode.removeChild(existingContainer);
-    }
-
-    // Get elements to hide
-    var prayerTimesElement = document.querySelector(".prayer-times");
-    var importantTimesElement = document.querySelector(".important-times");
-
-    // Save original states - use computed style if inline style is empty
-    var originalPrayerTimesState = null;
-    if (prayerTimesElement) {
-      var originalDisplay = prayerTimesElement.style.display;
-      if (!originalDisplay || originalDisplay === "") {
-        // Get computed style if no inline style is set
-        originalDisplay = window.getComputedStyle(prayerTimesElement).display;
-        if (originalDisplay === "none") {
-          originalDisplay = ""; // Will default to CSS rules
-        }
-      }
-      originalPrayerTimesState = {
-        display: originalDisplay,
-        className: prayerTimesElement.className,
-      };
-    }
-
-    var originalImportantTimesState = null;
-    if (importantTimesElement) {
-      var originalDisplay = importantTimesElement.style.display;
-      if (!originalDisplay || originalDisplay === "") {
-        // Get computed style if no inline style is set
-        originalDisplay = window.getComputedStyle(importantTimesElement).display;
-        if (originalDisplay === "none") {
-          originalDisplay = ""; // Will default to CSS rules
-        }
-      }
-      originalImportantTimesState = {
-        display: originalDisplay,
-        className: importantTimesElement.className,
-      };
-    }
-
-    // Hide both elements together using helper function
-    this.hidePrayerElements();
-
-    // Store original states for cleanup
-    displayState.originalPrayerTimesState = originalPrayerTimesState;
-    displayState.originalImportantTimesState = originalImportantTimesState;
-    displayState.prayerTimesElement = prayerTimesElement;
-    displayState.importantTimesElement = importantTimesElement;
-
-    // Create adhkar container
-    var adhkarContainer = document.createElement("div");
-    adhkarContainer.className = "adhkar-text-container";
-    adhkarContainer.id = "adhkar-display-container";
-
-    // Create and format text element with proper styling
-    var textElement = document.createElement("div");
-    textElement.className = "adhkar-text";
-    
-    // Format the text with proper sections and dividers
-    var formattedText = this.formatAdhkarText(text);
-    textElement.innerHTML = formattedText;
-
-    // Calculate dynamic font size based on content amount and page percentage
-    var pagePercentage = config.display.pageDistribution[currentPage] || 50;
-    var contentLength = text.length;
-    var baseSize = this.calculateDynamicFontSize(contentLength, pagePercentage, config);
-    
-    // Apply dynamic font size to the text container
-    textElement.style.fontSize = baseSize.main + "vw";
-    textElement.style.lineHeight = baseSize.lineHeight;
-    
-    // Apply sizes to child elements using CSS custom properties
-    textElement.style.setProperty('--dynamic-title-size', baseSize.title + 'vw');
-    textElement.style.setProperty('--dynamic-arabic-size', baseSize.arabic + 'vw');
-    textElement.style.setProperty('--dynamic-english-size', baseSize.english + 'vw');
-    textElement.style.setProperty('--dynamic-repetition-size', baseSize.repetition + 'vw');
-
-    adhkarContainer.appendChild(textElement);
-
-    // Countdown timer disabled per user request
-    // Users don't need to see "next page in X minutes Y seconds"
-
-    // Page indicator removed per user request
-
-    // Insert the adhkar container where prayer-times would normally be (same as images)
-    if (prayerTimesElement && prayerTimesElement.parentNode) {
-      prayerTimesElement.parentNode.insertBefore(adhkarContainer, prayerTimesElement);
-    } else {
-      // Fallback: add after date-container
-      var dateContainer = document.querySelector(".date-container");
-      var insertAfterElement = dateContainer ? dateContainer.nextElementSibling : document.body;
-      if (insertAfterElement) {
-        insertAfterElement.parentNode.insertBefore(adhkarContainer, insertAfterElement.nextSibling);
-      } else {
-        document.body.appendChild(adhkarContainer);
-      }
-    }
-
-    // Fade in effect
-    adhkarContainer.style.opacity = "0";
-    adhkarContainer.style.transition = "opacity 0.5s ease-in-out";
-    setTimeout(function() {
-      adhkarContainer.style.opacity = "1";
-    }, 100);
-  },
-
-  // Start countdown timer
-  startCountdown: function (element, seconds, displayText) {
-    var remainingSeconds = Math.floor(seconds);
-    
-    var updateCountdown = function() {
-      var minutes = Math.floor(remainingSeconds / 60);
-      var secs = remainingSeconds % 60;
-      var timeString = (minutes < 10 ? "0" : "") + minutes + ":" + (secs < 10 ? "0" : "") + secs;
-      element.textContent = displayText + " • Next in: " + timeString;
-      
-      if (remainingSeconds > 0) {
-        remainingSeconds--;
-        setTimeout(updateCountdown, 1000);
-      }
-    };
-    
-    updateCountdown();
-  },
-
-  // Format Adhkar text with proper sections and dividers
-  formatAdhkarText: function (text) {
-    if (!text) return "";
-    
-    var lines = text.split('\n');
-    var formattedHtml = "";
-    var lastWasEmpty = false;
-    
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i].trim();
-      
-      if (!line) {
-        // Mark that we had an empty line, but don't add divider yet
-        lastWasEmpty = true;
-        continue;
-      }
-      
-      // Check if line is just <br> - add border separator
-      if (line === '<br>') {
-        formattedHtml += '<div class="adhkar-border-separator"></div>';
-        lastWasEmpty = false;
-        continue;
-      }
-      
-      // If we had an empty line before this content, add a divider
-      if (lastWasEmpty && formattedHtml) {
-        formattedHtml += '<div class="adhkar-divider"></div>';
-      }
-      lastWasEmpty = false;
-      
-      // Check if it's the main title (first line)
-      if (i === 0 || (line.includes('الأذكار بعد الصلاة') || line.includes('Adhkār After Salāh'))) {
-        formattedHtml += '<div class="repetition">' + this.escapeHtml(line) + '</div>';
-      }
-      // Check if it's a special section like "Special Adhkār"
-      else if (line === "Special Adhkār" || line === "Special Adhkar") {
-        formattedHtml += '<div class="special-section">' + this.escapeHtml(line) + '</div>';
-      }
-      // Check if it's a repetition count (contains ×)
-      else if (line.includes('×')) {
-        formattedHtml += '<div class="arabic-text">' + this.escapeHtml(line) + '</div>';
-      }
-      // Check if it's a section header (starts with English words like "After Fajr Prayer")
-      else if (/^[A-Za-z]/.test(line) && !(/[\u0600-\u06FF\u0750-\u077F]/.test(line))) {
-        formattedHtml += '<div class="english-text">' + this.escapeHtml(line) + '</div>';
-      }
-      // Arabic text
-      else if (/[\u0600-\u06FF\u0750-\u077F]/.test(line)) {
-        formattedHtml += '<div class="arabic-text">' + this.escapeHtml(line) + '</div>';
-      }
-      // Default text
-      else {
-        formattedHtml += '<div class="adhkar-section">' + this.escapeHtml(line) + '</div>';
-      }
-    }
-    
-    return formattedHtml;
-  },
-
-  // Calculate dynamic font size based on content length to fill the page
-  calculateDynamicFontSize: function(contentLength, pagePercentage, config) {
-    // Simple approach: calculate font size purely based on content length
-    // The goal is to fill the entire page regardless of percentage allocation
-    
-    // Base calculation: less content = larger font, more content = smaller font
-    // This ensures each page fills its available space optimally
-    var contentFactor = Math.max(0.6, Math.min(1.5, 500 / contentLength));
-    
-    // Base font size calculation
-    var baseFontSize = 2.8 * contentFactor;
-    
-    // Ensure reasonable size range to prevent overflow or undersized text
-    baseFontSize = Math.max(1.8, Math.min(3.2, baseFontSize));
-    
-    return {
-      main: baseFontSize,
-      title: baseFontSize * 1.3,
-      arabic: baseFontSize * 1.80,
-      english: baseFontSize * 0.85,
-      repetition: baseFontSize * 0.75,
-      lineHeight: Math.max(0.9, 1.2 - (baseFontSize * 0.05))
-    };
-  },
-
-  // Escape HTML characters
-  escapeHtml: function (text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  },
-
-  // Pause ongoing announcements/images
-  pauseOngoingAnnouncements: function () {
-    // Find and store any existing slideshow
-    var existingSlideshow = document.querySelector(".image-slideshow-container");
-    if (existingSlideshow) {
-      displayState.pausedAnnouncement = {
-        element: existingSlideshow,
-        parent: existingSlideshow.parentNode,
-      };
-
-      // Fade out before removing
-      fadeOutAndRemove(existingSlideshow, function() {
-        // No additional callback needed
-      });
-    }
-
-    // Clear any existing resume timeout
-    if (displayState.resumeTimeout) {
-      clearTimeout(displayState.resumeTimeout);
-    }
-  },
-
-  // Resume paused announcements/images
-  resumePausedAnnouncements: function () {
-    if (displayState.pausedAnnouncement) {
-      var paused = displayState.pausedAnnouncement;
-      if (paused.element && paused.parent) {
-        paused.parent.appendChild(paused.element);
-      }
-      displayState.pausedAnnouncement = null;
-    }
-  },
-
-  // Clean up Adhkar display and restore normal content
-  cleanupAdhkarDisplay: function () {
-    var self = this;
-    
-    // Clear timeouts
-    if (displayState.adhkarPageTimeout) {
-      clearTimeout(displayState.adhkarPageTimeout);
-      displayState.adhkarPageTimeout = null;
-    }
-
-    // Fade out and remove adhkar container
-    var adhkarContainer = document.getElementById("adhkar-display-container");
-    if (adhkarContainer && adhkarContainer.parentNode) {
-      this.fadeOutAndRemove(adhkarContainer, function() {
-        // Restore elements after fade-out completes
-        restoreElements();
-      });
-    } else {
-      restoreElements();
-    }
-
-    function restoreElements() {
-      // Countdown will be removed with the adhkar container
-      // No separate cleanup needed since it's a child of adhkarContainer
-
-      // Restore prayer-times element
-      if (displayState.prayerTimesElement && displayState.originalPrayerTimesState) {
-        displayState.prayerTimesElement.className = displayState.originalPrayerTimesState.className || "";
-      }
-
-      // Restore important-times element
-      if (displayState.importantTimesElement && displayState.originalImportantTimesState) {
-        displayState.importantTimesElement.className = displayState.originalImportantTimesState.className || "";
-      }
-
-      // Show both elements together using helper function
-      self.showPrayerElements();
-
-      // Resume any paused announcements/images
-      self.resumePausedAnnouncements();
-
-      // Reset adhkar state
-      displayState.adhkarActive = false;
-      displayState.adhkarConfig = null;
-      displayState.adhkarCurrentPage = 0;
-      displayState.adhkarCurrentCycle = 0;
-      displayState.adhkarTotalPages = 0;
-      displayState.adhkarTotalCycles = 0;
-      displayState.originalPrayerTimesState = null;
-      displayState.originalImportantTimesState = null;
-      displayState.prayerTimesElement = null;
-      displayState.importantTimesElement = null;
-    }
-  },
-
-  // ===== END ADHKAR FUNCTIONALITY =====
+  }
 };
 
 // Initialize announcements when the DOM is loaded
@@ -2256,10 +1432,8 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Check for active display elements
     var activeSlideshow = document.querySelector(".image-slideshow-container");
-    var activeAdhkarImage = document.querySelector(".adhkar-interleave-image-container");
     var activeTafseer = document.querySelector(".tafseer-display-container");
-    var activeAdhkarText = document.getElementById("adhkar-display-container");
-    var allActiveElements = [activeSlideshow, activeAdhkarImage, activeTafseer, activeAdhkarText].filter(Boolean);
+    var allActiveElements = [activeSlideshow, activeTafseer].filter(Boolean);
     
     console.log("DEBUG: Found", allActiveElements.length, "active poster elements");
     

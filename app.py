@@ -1,11 +1,28 @@
 import csv
+import json
 from datetime import datetime, timezone
 
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 from hijri_converter import convert
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+
+# Load mosque configuration
+def load_config():
+    try:
+        with open('mosque_config.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print("Warning: mosque_config.json not found, using defaults")
+        return {
+            "mosque": {"name": "Mosque", "displayName": "Mosque"},
+            "timezone": {"hasDST": True, "standardOffset": 0, "dstOffset": 1},
+            "jumuah": {"summer": {"time": "13:45"}, "winter": {"time": "13:20"}},
+            "display": {"title": "Prayer Times"}
+        }
+
+config = load_config()
 
 
 # Load the prayer times from the CSV file
@@ -110,7 +127,15 @@ def index():
                          today_prayer_times=today_prayer_times,
                          tomorrow_prayer_times=tomorrow_prayer_times,
                          important_times=important_times,
-                         tomorrow_important_times=tomorrow_important_times)
+                         tomorrow_important_times=tomorrow_important_times,
+                         mosque_name=config['mosque']['displayName'],
+                         page_title=config['display']['title'])
+
+# API endpoint to serve mosque configuration to frontend
+@app.route('/api/config')
+def get_config():
+    return jsonify(config)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
