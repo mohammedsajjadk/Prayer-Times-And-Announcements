@@ -102,7 +102,7 @@
       "/static/images/Tafseer of the Quran Ramadhan.jpg"
     ],
     "isSpecial": true,
-    "hide": true 
+    "hide": true
   },
   {
     "id": "tafseer_sunday_for_ramadhan_recurring",
@@ -477,6 +477,40 @@
     },
     "images": [
       "/static/images/laylathul qadr.jpg"
+    ],
+    "isSpecial": true
+  },
+  {
+    "id": "Fiqh_of_Sadaqah_2026",
+    "startDate": "2026-03-18T04:00:00+01:00",
+    "endDate": "2026-03-18T17:55:00+01:00",
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/Fiqh of Sadaqah.jpg"
+    ],
+    "isSpecial": true
+  },
+  {
+    "id": "bidding_farewell_to_ramadhan",
+    "startDate": "2026-03-19T04:00:00+01:00",
+    "endDate": "2026-03-19T17:55:00+01:00",
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/bidding_farewell_to_ramadhan.jpg"
     ],
     "isSpecial": true
   }
