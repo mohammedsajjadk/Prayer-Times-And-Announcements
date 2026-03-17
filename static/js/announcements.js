@@ -433,7 +433,7 @@ var announcementModule = {
     var isSpecialAnnouncement = false;
     var imageData = null;
 
-    // Check if we should display Adhkar poster
+    // Check if we should display Adhkar poster - THIS TAKES ABSOLUTE PRIORITY
     var adhkarPosterCheck = this.checkAdhkarPoster(currentTime, dayOfWeek, isIrishSummerTime, {
       fajrJamaah: fajrJamaahTime,
       zohrJamaah: zohrJamaahTime,
@@ -443,29 +443,45 @@ var announcementModule = {
     });
     
     if (adhkarPosterCheck.shouldDisplay) {
-      // Display Adhkar poster
+      console.log("DEBUG: Adhkar poster should display - superseding all other announcements");
+      // Display Adhkar poster ONLY - skip all other announcements during this time
       imageData = {
         images: ['/static/images/Adhkar.jpg'],
         displayCondition: {
           frequency: 1,
-          duration: 60,
+          duration: 120,  // 2 minutes = 120 seconds
           avoidJamaahTime: false
         },
         isSpecial: true,
+        isAdhkarPoster: true,  // Special flag to bypass cycle rotation logic
         schedule: [{
           imagePath: '/static/images/Adhkar.jpg',
           frequency: 1,
-          duration: 60,
+          duration: 120,  // 2 minutes = 120 seconds
           avoidJamaahTime: false,
           announcementId: 'adhkar_poster'
         }],
         gapDuration: 0,
-        totalActiveTime: 60,
-        totalCycleTime: 120
+        totalActiveTime: 120,
+        totalCycleTime: 120  // No gap for Adhkar
       };
+      
+      // Display the Adhkar poster and skip all other processing
+      this.handleImageAnnouncement(imageData, currentTime, [
+        fajrJamaahTime,
+        zohrJamaahTime,
+        asrJamaahTime,
+        magribJamaahTime,
+        ishaJamaahTime,
+      ]);
+      
+      // Update text announcement to default
+      announcementElement.textContent = message;
+      announcementElement.className = "";
+      return; // Exit early - don't process any other announcements
     }
 
-    // Check for any dynamic announcements
+    // Check for any dynamic announcements (only if Adhkar is not active)
     var activeDynamicAnnouncement = this.getActiveDynamicAnnouncement(now);
     console.log("DEBUG: Active dynamic announcement:", activeDynamicAnnouncement);
     if (activeDynamicAnnouncement) {
@@ -891,6 +907,19 @@ var announcementModule = {
 
   // Handle sequential image announcements with gaps and cycle timing
   handleImageAnnouncement: function (imageData, currentTime, jamaahTimes) {
+    // Special handling for Adhkar poster - bypass all cycle logic
+    if (imageData.isAdhkarPoster) {
+      console.log("DEBUG ADHKAR: Displaying Adhkar poster immediately - bypassing cycle logic");
+      var adhkarImage = imageData.schedule[0];
+      this.displaySingleImage(
+        adhkarImage.imagePath,
+        adhkarImage.duration,
+        adhkarImage.announcementId,
+        imageData.isSpecial || false
+      );
+      return;
+    }
+
     // Check if we have a rotation schedule
     console.log("DEBUG: Checking schedule - exists:", !!imageData.schedule, "isArray:", Array.isArray(imageData.schedule), "length:", imageData.schedule ? imageData.schedule.length : 'N/A');
     if (!imageData.schedule || !Array.isArray(imageData.schedule) || imageData.schedule.length === 0) {
@@ -1373,14 +1402,17 @@ var announcementModule = {
 
   // Check if Adhkar poster should be displayed
   checkAdhkarPoster: function(currentTime, dayOfWeek, isIrishSummerTime, jamaahTimes) {
+    console.log("DEBUG ADHKAR: Checking Adhkar poster - currentTime:", currentTime, "dayOfWeek:", dayOfWeek, "jamaahTimes:", jamaahTimes);
     var result = { shouldDisplay: false };
     
     // For Friday Zohr: display at specific times
     if (dayOfWeek === 5) { // Friday
       var fridayZohrTime = isIrishSummerTime ? timeUtils.timeToMinutes("14:10") : timeUtils.timeToMinutes("13:42");
-      var fridayZohrEndTime = fridayZohrTime + 4; // Display for 4 minutes
+      var fridayZohrEndTime = fridayZohrTime + 2; // Display for 2 minutes
       
+      console.log("DEBUG ADHKAR: Friday check - fridayZohrTime:", fridayZohrTime, "fridayZohrEndTime:", fridayZohrEndTime);
       if (currentTime >= fridayZohrTime && currentTime < fridayZohrEndTime) {
+        console.log("DEBUG ADHKAR: ✓ Friday Adhkar should display!");
         result.shouldDisplay = true;
         return result;
       }
@@ -1388,7 +1420,7 @@ var announcementModule = {
     
     // For other prayers: display Jamaah + 8 minutes
     var adhkarDelay = 8; // minutes after Jamaah
-    var adhkarDuration = 4; // minutes to display
+    var adhkarDuration = 2; // minutes to display
     
     var jamaahList = [
       { name: 'fajrJamaah', time: jamaahTimes.fajrJamaah, excludeFriday: false },
@@ -1410,13 +1442,16 @@ var announcementModule = {
         var adhkarStartTime = jamaah.time + adhkarDelay;
         var adhkarEndTime = adhkarStartTime + adhkarDuration;
         
+        console.log("DEBUG ADHKAR: Checking", jamaah.name, "- jamaahTime:", jamaah.time, "adhkarWindow:", adhkarStartTime, "-", adhkarEndTime);
         if (currentTime >= adhkarStartTime && currentTime < adhkarEndTime) {
+          console.log("DEBUG ADHKAR: ✓ Adhkar should display for", jamaah.name, "!");
           result.shouldDisplay = true;
           return result;
         }
       }
     }
     
+    console.log("DEBUG ADHKAR: No Adhkar time matched - returning false");
     return result;
   }
 };

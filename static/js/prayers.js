@@ -363,11 +363,12 @@ var prayerModule = {
           return;
         }
 
-        // Calculate current jamaah minutes + 5 minutes
+        // Calculate current jamaah minutes + 15 minutes
+        // (Changed from 5 to 15 to allow Adhkar poster to display at jamaah+8min before rollover)
         var jamaahMinutes = timeUtils.timeToMinutes(jamaahTime);
-        var thresholdTime = jamaahMinutes + 5;
+        var thresholdTime = jamaahMinutes + 15;
 
-        // If current time is past jamaah + 5 minutes, update to tomorrow's times
+        // If current time is past jamaah + 15 minutes, update to tomorrow's times
         if (currentTime >= thresholdTime) {
           // Get next day's times from data attributes we'll store
           var tomorrowBeginning = beginningEl.getAttribute("data-tomorrow");
