@@ -481,23 +481,6 @@
     "isSpecial": true
   },
   {
-    "id": "laylatul_qadr_5",
-    "startDate": "2026-03-17T00:00:00+01:00",
-    "endDate": "2026-03-17T23:59:00+01:00",
-    "type": "image",
-    "displayCondition": {
-      "frequency": 1,
-      "duration": 60,
-      "gapBetweenImages": 60,
-      "avoidJamaahTime": true,
-      "rotateImages": true
-    },
-    "images": [
-      "/static/images/laylathul qadr.jpg"
-    ],
-    "isSpecial": true
-  },
-  {
     "id": "post_jamaah_adhkar",
     "type": "adhkar_text",
     "rank": 1,
