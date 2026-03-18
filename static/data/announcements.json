@@ -513,5 +513,22 @@
       "/static/images/bidding_farewell_to_ramadhan.jpg"
     ],
     "isSpecial": true
+  },
+  {
+    "id": "eidulfitr_2026",
+    "startDate": "2026-03-18T00:00:00+01:00",
+    "endDate": "2026-03-20T06:00:00+01:00",
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/eidulfitr.jpg"
+    ],
+    "isSpecial": true
   }
 ]
