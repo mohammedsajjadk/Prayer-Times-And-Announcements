@@ -446,24 +446,34 @@ var announcementModule = {
       console.log("DEBUG: Adhkar poster should display - superseding all other announcements");
       // Display Adhkar poster ONLY - skip all other announcements during this time
       imageData = {
-        images: ['/static/images/Adhkar.jpg'],
+        images: ['/static/images/Adhkar1.jpg', '/static/images/Adhkar2.jpg'],
         displayCondition: {
           frequency: 1,
-          duration: 120,  // 2 minutes = 120 seconds
+          duration: 180,  // 3 minutes = 180 seconds total
           avoidJamaahTime: false
         },
         isSpecial: true,
         isAdhkarPoster: true,  // Special flag to bypass cycle rotation logic
-        schedule: [{
-          imagePath: '/static/images/Adhkar.jpg',
-          frequency: 1,
-          duration: 120,  // 2 minutes = 120 seconds
-          avoidJamaahTime: false,
-          announcementId: 'adhkar_poster'
-        }],
+        adhkarStartSeconds: adhkarPosterCheck.adhkarStartSeconds,
+        schedule: [
+          {
+            imagePath: '/static/images/Adhkar1.jpg',
+            frequency: 1,
+            duration: 90,  // 90 seconds
+            avoidJamaahTime: false,
+            announcementId: 'adhkar_poster_1'
+          },
+          {
+            imagePath: '/static/images/Adhkar2.jpg',
+            frequency: 1,
+            duration: 90,  // 90 seconds
+            avoidJamaahTime: false,
+            announcementId: 'adhkar_poster_2'
+          }
+        ],
         gapDuration: 0,
-        totalActiveTime: 120,
-        totalCycleTime: 120  // No gap for Adhkar
+        totalActiveTime: 180,
+        totalCycleTime: 180  // No gap for Adhkar
       };
       
       // Display the Adhkar poster and skip all other processing
@@ -736,7 +746,7 @@ var announcementModule = {
     }, 500); // Match the transition duration
   },
 
-  cleanupAllPosterElements: function(callback) {
+  cleanupAllPosterElements: function(callback, skipShowPrayerElements) {
     console.log("DEBUG: Starting comprehensive cleanup of all poster elements");
     
     // Remove all possible poster container types
@@ -772,7 +782,7 @@ var announcementModule = {
 
     if (elements.length === 0) {
       console.log("DEBUG: Cleanup complete, no elements to remove");
-      this.showPrayerElements();
+      if (!skipShowPrayerElements) { this.showPrayerElements(); }
       if (callback) callback();
       return;
     }
@@ -792,7 +802,7 @@ var announcementModule = {
         // After all elements are removed
         if (removedCount === totalElements) {
           console.log("DEBUG: Cleanup complete, removed", removedCount, "elements");
-          self.showPrayerElements();
+          if (!skipShowPrayerElements) { self.showPrayerElements(); }
           if (callback) callback();
         }
       });
@@ -910,7 +920,11 @@ var announcementModule = {
     // Special handling for Adhkar poster - bypass all cycle logic
     if (imageData.isAdhkarPoster) {
       console.log("DEBUG ADHKAR: Displaying Adhkar poster immediately - bypassing cycle logic");
-      var adhkarImage = imageData.schedule[0];
+      var now = new Date();
+      var currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      var elapsedSeconds = currentTotalSeconds - (imageData.adhkarStartSeconds || 0);
+      var adhkarImage = (elapsedSeconds < 90) ? imageData.schedule[0] : imageData.schedule[1];
+      console.log("DEBUG ADHKAR: elapsedSeconds:", elapsedSeconds, "- showing:", adhkarImage.imagePath);
       this.displaySingleImage(
         adhkarImage.imagePath,
         adhkarImage.duration,
@@ -1021,13 +1035,13 @@ var announcementModule = {
         return;
       } else {
         console.log("DEBUG: Different image requested, replacing existing slideshow");
-        // Clean up existing slideshow first
-        this.cleanupAllPosterElements();
+        // Clean up existing slideshow first - skip showPrayerElements since we're immediately replacing
+        this.cleanupAllPosterElements(null, true);
       }
     } else {
       console.log("DEBUG: No existing slideshow, creating new one");
       // Clean up any existing poster elements first to ensure clean state
-      this.cleanupAllPosterElements();
+      this.cleanupAllPosterElements(null, true);
     }
 
     // Create ID for this slideshow session to avoid conflicts
@@ -1408,19 +1422,20 @@ var announcementModule = {
     // For Friday Zohr: display at specific times
     if (dayOfWeek === 5) { // Friday
       var fridayZohrTime = isIrishSummerTime ? timeUtils.timeToMinutes("14:10") : timeUtils.timeToMinutes("13:42");
-      var fridayZohrEndTime = fridayZohrTime + 2; // Display for 2 minutes
+      var fridayZohrEndTime = fridayZohrTime + 3; // Display for 3 minutes
       
       console.log("DEBUG ADHKAR: Friday check - fridayZohrTime:", fridayZohrTime, "fridayZohrEndTime:", fridayZohrEndTime);
       if (currentTime >= fridayZohrTime && currentTime < fridayZohrEndTime) {
         console.log("DEBUG ADHKAR: ✓ Friday Adhkar should display!");
         result.shouldDisplay = true;
+        result.adhkarStartSeconds = fridayZohrTime * 60;
         return result;
       }
     }
     
     // For other prayers: display Jamaah + 8 minutes
     var adhkarDelay = 8; // minutes after Jamaah
-    var adhkarDuration = 2; // minutes to display
+    var adhkarDuration = 3; // minutes to display
     
     var jamaahList = [
       { name: 'fajrJamaah', time: jamaahTimes.fajrJamaah, excludeFriday: false },
@@ -1446,6 +1461,7 @@ var announcementModule = {
         if (currentTime >= adhkarStartTime && currentTime < adhkarEndTime) {
           console.log("DEBUG ADHKAR: ✓ Adhkar should display for", jamaah.name, "!");
           result.shouldDisplay = true;
+          result.adhkarStartSeconds = adhkarStartTime * 60;
           return result;
         }
       }
