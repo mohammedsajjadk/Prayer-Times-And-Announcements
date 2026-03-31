@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Announcements Admin</title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous">
+  <style>
+    body { background: #f5f5f5; }
+    .navbar-brand { font-weight: 700; }
+    .ann-card { border-left: 4px solid #0d6efd; }
+    .ann-card.type-control { border-left-color: #6f42c1; }
+    .ann-card.type-recurring { border-left-color: #198754; }
+    .ann-card.type-image { border-left-color: #fd7e14; }
+    .ann-card.is-hidden { background: #e9ecef !important; border-left-color: #aaa !important; }
+    .img-preview { max-height: 80px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container-lg">
+    <span class="navbar-brand">&#128226; Announcements Admin</span>
+    <div class="d-flex gap-2">
+      <a href="/manage/" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
+      <a href="/" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-lg">
+
+  <!-- Token card (shared with prayer times page via same localStorage key) -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h6 class="card-title mb-2">GitHub Token</h6>
+      <div id="tokenSetSection">
+        <div class="input-group mb-2" style="max-width:520px">
+          <input type="password" id="tokenInput" class="form-control"
+                 placeholder="Paste your GitHub fine-grained token">
+          <button class="btn btn-primary" onclick="saveToken()">Save</button>
+        </div>
+        <small class="text-muted">
+          Saved only in your browser (localStorage). Never sent to the server.
+          Needs <em>Contents: Read and write</em> permission on the prayer-times repo.
+        </small>
+      </div>
+      <div id="tokenSavedSection" style="display:none">
+        <span class="text-success fw-semibold">&#10003; Token saved</span>
+        <button class="btn btn-sm btn-outline-danger ms-3" onclick="clearToken()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div id="statusArea"></div>
+
+  <!-- Toolbar -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h4 class="mb-0">Announcements</h4>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" onclick="togglePanel('addTextPanel')">&#43; Text</button>
+      <button class="btn btn-success btn-sm" onclick="togglePanel('addImagePanel')">&#43; Image</button>
+    </div>
+  </div>
+
+  <!-- Add Text panel -->
+  <div id="addTextPanel" class="card mb-4 border-primary" style="display:none">
+    <div class="card-header bg-primary text-white"><strong>Add Text Announcement</strong></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">ID <small class="text-muted">(unique, e.g. ramadan_2027)</small></label>
+          <input type="text" id="txt_id" class="form-control" placeholder="ramadan_2027">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Message</label>
+          <textarea id="txt_msg" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Start date</label>
+          <input type="date" id="txt_start_date" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Start time</label>
+          <input type="time" id="txt_start_time" class="form-control" value="09:00">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">End date</label>
+          <input type="date" id="txt_end_date" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">End time</label>
+          <input type="time" id="txt_end_time" class="form-control" value="23:59">
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="txt_special" checked>
+            <label class="form-check-label" for="txt_special">Special announcement</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-success me-2" onclick="addText()">Save to GitHub</button>
+        <button class="btn btn-secondary" onclick="togglePanel('addTextPanel')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Image panel -->
+  <div id="addImagePanel" class="card mb-4 border-success" style="display:none">
+    <div class="card-header bg-success text-white"><strong>Add Image Announcement</strong></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">ID <small class="text-muted">(unique, e.g. youth_event_2027)</small></label>
+          <input type="text" id="img_id" class="form-control" placeholder="youth_event_2027">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Image file <small class="text-muted">(jpg/png — uploaded to GitHub)</small></label>
+          <input type="file" id="img_file" class="form-control" accept="image/*" onchange="previewImage()">
+          <img id="img_preview" class="img-preview mt-2" style="display:none">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Start date</label>
+          <input type="date" id="img_start_date" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Start time</label>
+          <input type="time" id="img_start_time" class="form-control" value="09:00">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">End date</label>
+          <input type="date" id="img_end_date" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">End time</label>
+          <input type="time" id="img_end_time" class="form-control" value="23:59">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Frequency <small class="text-muted">(minutes)</small></label>
+          <input type="number" id="img_freq" class="form-control" value="1" min="1">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Duration <small class="text-muted">(seconds)</small></label>
+          <input type="number" id="img_dur" class="form-control" value="60" min="5">
+        </div>
+        <div class="col-12">
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="img_special" checked>
+            <label class="form-check-label" for="img_special">Special</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="img_avoid" checked>
+            <label class="form-check-label" for="img_avoid">Avoid Jamaah times</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-success me-2" onclick="addImage()">Upload &amp; Save to GitHub</button>
+        <button class="btn btn-secondary" onclick="togglePanel('addImagePanel')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcement list -->
+  <div id="annList"><div class="text-muted">Loading…</div></div>
+
+</div>
+
+<!-- ── Edit Modal ──────────────────────────────────────────────────────────── -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editModalTitle">Edit Announcement</h5>
+        <button type="button" class="btn-close" onclick="hideModal()"></button>
+      </div>
+      <div class="modal-body" id="editModalBody"><!-- populated by JS --></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveEdit()">Save to GitHub</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmX3TBQLzT2HyCrFaLMuDFHGpNap"
+        crossorigin="anonymous"></script>
+<script>
+const REPO            = 'mohammedsajjadk/prayer-times';
+const BRANCH          = 'main';
+const JSON_PATH       = 'static/data/announcements.json';
+const IMAGES_DIR      = 'static/images';
+const API             = 'https://api.github.com';
+
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// ─── Token ────────────────────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('gh_token') || ''; }
+function saveToken() {
+  const t = document.getElementById('tokenInput').value.trim();
+  if (!t) { showStatus('Please paste a token first.', 'warning'); return; }
+  localStorage.setItem('gh_token', t);
+  document.getElementById('tokenInput').value = '';
+  showTokenState();
+  loadAnnouncements();
+}
+function clearToken() { localStorage.removeItem('gh_token'); showTokenState(); loadAnnouncements(); }
+function showTokenState() {
+  const has = !!getToken();
+  document.getElementById('tokenSetSection').style.display = has ? 'none' : '';
+  document.getElementById('tokenSavedSection').style.display = has ? '' : 'none';
+}
+
+// ─── GitHub helpers ───────────────────────────────────────────────────────────
+async function ghGet(path) {
+  const token = getToken();
+  const resp = await fetch(`${API}/repos/${REPO}/contents/${path}?ref=${BRANCH}`, {
+    headers: token
+      ? { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' }
+      : { Accept: 'application/vnd.github+json' },
+  });
+  return resp;
+}
+
+async function ghPut(path, contentB64, sha, message) {
+  const token = getToken();
+  if (!token) throw new Error('No GitHub token saved. Enter your token above first.');
+  const body = { message, content: contentB64, branch: BRANCH };
+  if (sha) body.sha = sha;
+  const resp = await fetch(`${API}/repos/${REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const e = await resp.json().catch(() => ({}));
+    throw new Error(`GitHub error (${resp.status}): ${e.message || 'unknown'}`);
+  }
+  return resp;
+}
+
+// ─── Load / save announcements JSON ──────────────────────────────────────────
+async function fetchAnnouncements() {
+  const token = getToken();
+  if (token) {
+    try {
+      const resp = await ghGet(JSON_PATH);
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+        return { data: JSON.parse(text), sha: data.sha };
+      }
+    } catch (_) {}
+  }
+  const res = await fetch('/api/announcements');
+  const text = await res.text();
+  return { data: JSON.parse(text), sha: null };
+}
+
+async function saveAnnouncements(announcements, sha, message) {
+  const json = JSON.stringify(announcements, null, 2);
+  const b64  = btoa(unescape(encodeURIComponent(json)));
+  const resp = await ghPut(JSON_PATH, b64, sha, message);
+  // Update SHA immediately so the next commit never sends a stale SHA (→ 409)
+  const data = await resp.json();
+  if (data.content && data.content.sha) window._annSha = data.content.sha;
+}
+
+// ─── Image upload to GitHub ───────────────────────────────────────────────────
+async function uploadImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      // FileReader result: "data:image/jpeg;base64,AAAA..." — strip the prefix
+      const b64 = reader.result.split(',')[1];
+      const path = `${IMAGES_DIR}/${file.name}`;
+      // Check if file already exists (get its SHA for update, or null for new)
+      let sha;
+      try {
+        const check = await ghGet(path);
+        sha = check.ok ? (await check.json()).sha : undefined;
+      } catch (_) { sha = undefined; }
+      try {
+        await ghPut(path, b64, sha, `Upload image: ${file.name}`);
+        resolve(`/static/images/${file.name}`);
+      } catch (e) { reject(e); }
+    };
+    reader.onerror = () => reject(new Error('Could not read image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+async function loadAnnouncements() {
+  document.getElementById('annList').innerHTML = '<div class="text-muted">Loading…</div>';
+  let result;
+  try { result = await fetchAnnouncements(); }
+  catch (e) { showStatus('Could not load announcements: ' + e.message, 'danger'); return; }
+  renderList(result.data);
+  // Stash sha for subsequent saves
+  window._annSha = result.sha;
+  window._annData = result.data;
+}
+
+function renderList(items) {
+  if (!items.length) {
+    document.getElementById('annList').innerHTML = '<div class="alert alert-info">No announcements.</div>';
+    return;
+  }
+
+  const html = items.map((a, idx) => {
+    const type   = a.type || 'text';
+    const hidden = a.hide === true;
+    const typeClass = type === 'control'          ? 'type-control'
+                    : type === 'recurring_weekly'  ? 'type-recurring'
+                    : type === 'image'             ? 'type-image' : '';
+    const hiddenClass = hidden ? 'is-hidden' : '';
+
+    let detail = '';
+    if (type === 'control') {
+      detail = `<span class="text-muted">${a.description || ''}</span>`;
+    } else if (type === 'recurring_weekly') {
+      const day = DAYS[a.dayOfWeek] || a.dayOfWeek;
+      const imgs = (a.images || []).map(i =>
+        `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
+      ).join('');
+      detail = `<div>Every <strong>${day}</strong></div>${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+    } else if (type === 'image') {
+      const imgs = (a.images || []).map(i =>
+        `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
+      ).join('');
+      detail = `
+        <div><small>${a.startDate || ''} → ${a.endDate || ''}</small></div>
+        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+    } else {
+      // text
+      detail = `
+        <div><small>${a.startDate || ''} → ${a.endDate || ''}</small></div>
+        <div class="mt-1">${a.message || ''}</div>`;
+    }
+
+    const hideBtnLabel = hidden ? 'Show' : 'Hide';
+    const hideBtnClass = hidden ? 'btn-outline-success' : 'btn-outline-secondary';
+
+    return `
+      <div class="card mb-2 ann-card ${typeClass} ${hiddenClass}">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div style="min-width:0">
+              <span class="badge bg-secondary me-1">${type}</span>
+              ${hidden ? '<span class="badge bg-danger me-1">HIDDEN</span>' : ''}
+              <strong>${a.id}</strong>
+              <div class="mt-1 small">${detail}</div>
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end">
+              ${type !== 'control' ? `<button class="btn btn-sm btn-outline-primary" onclick="openEdit(${idx})">Edit</button>` : ''}
+              <button class="btn btn-sm ${hideBtnClass}" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteAnn(${idx})">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('annList').innerHTML = html;
+}
+
+// ─── Add text ────────────────────────────────────────────────────────────────
+async function addText() {
+  const id       = document.getElementById('txt_id').value.trim();
+  const msg      = document.getElementById('txt_msg').value.trim();
+  const sd       = document.getElementById('txt_start_date').value;
+  const st       = document.getElementById('txt_start_time').value;
+  const ed       = document.getElementById('txt_end_date').value;
+  const et       = document.getElementById('txt_end_time').value;
+  const special  = document.getElementById('txt_special').checked;
+
+  if (!id || !msg || !sd || !ed) { showStatus('Please fill in ID, message, and dates.', 'warning'); return; }
+  if (window._annData.some(a => a.id === id)) {
+    showStatus(`ID "${id}" already exists. Choose a different ID.`, 'danger'); return;
+  }
+
+  const entry = {
+    id,
+    startDate: `${sd}T${st}:00+01:00`,
+    endDate:   `${ed}T${et}:00+01:00`,
+    message:   msg,
+    isSpecial: special,
+  };
+
+  showStatus('Saving to GitHub…', 'info');
+  try {
+    const updated = [...window._annData, entry];
+    await saveAnnouncements(updated, window._annSha, `Add text announcement: ${id}`);
+    window._annData = updated;
+    renderList(updated);
+    showStatus(`&#10003; "${id}" added.`, 'success');
+    togglePanel('addTextPanel');
+    // Clear fields
+    ['txt_id','txt_msg','txt_start_date','txt_start_time','txt_end_date','txt_end_time'].forEach(
+      f => document.getElementById(f).value = ''
+    );
+  } catch (e) { showStatus(e.message, 'danger'); }
+}
+
+// ─── Add image ────────────────────────────────────────────────────────────────
+async function addImage() {
+  const id      = document.getElementById('img_id').value.trim();
+  const file    = document.getElementById('img_file').files[0];
+  const sd      = document.getElementById('img_start_date').value;
+  const st      = document.getElementById('img_start_time').value;
+  const ed      = document.getElementById('img_end_date').value;
+  const et      = document.getElementById('img_end_time').value;
+  const freq    = parseInt(document.getElementById('img_freq').value, 10) || 1;
+  const dur     = parseInt(document.getElementById('img_dur').value, 10) || 60;
+  const special = document.getElementById('img_special').checked;
+  const avoid   = document.getElementById('img_avoid').checked;
+
+  if (!id || !file || !sd || !ed) {
+    showStatus('Please fill in ID, choose an image, and set dates.', 'warning'); return;
+  }
+  if (window._annData.some(a => a.id === id)) {
+    showStatus(`ID "${id}" already exists. Choose a different ID.`, 'danger'); return;
+  }
+
+  showStatus('Uploading image to GitHub…', 'info');
+  let imagePath;
+  try {
+    imagePath = await uploadImage(file);
+  } catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
+
+  const entry = {
+    id,
+    startDate: `${sd}T${st}:00+01:00`,
+    endDate:   `${ed}T${et}:00+01:00`,
+    type: 'image',
+    displayCondition: {
+      frequency: freq,
+      duration:  dur,
+      gapBetweenImages: 60,
+      avoidJamaahTime: avoid,
+      rotateImages: true,
+    },
+    images:    [imagePath],
+    isSpecial: special,
+  };
+
+  showStatus('Saving announcement to GitHub…', 'info');
+  try {
+    const updated = [...window._annData, entry];
+    await saveAnnouncements(updated, window._annSha, `Add image announcement: ${id}`);
+    window._annData = updated;
+    renderList(updated);
+    showStatus(`&#10003; "${id}" added with image ${file.name}.`, 'success');
+    togglePanel('addImagePanel');
+    document.getElementById('img_id').value = '';
+    document.getElementById('img_file').value = '';
+    document.getElementById('img_preview').style.display = 'none';
+  } catch (e) { showStatus(e.message, 'danger'); }
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────────
+async function deleteAnn(idx) {
+  const ann = window._annData[idx];
+  if (!confirm(`Delete "${ann.id}"?`)) return;
+  const updated = window._annData.filter((_, i) => i !== idx);
+  showStatus('Saving to GitHub…', 'info');
+  try {
+    await saveAnnouncements(updated, window._annSha, `Delete announcement: ${ann.id}`);
+    window._annData = updated;
+    renderList(updated);
+    showStatus(`&#10003; "${ann.id}" deleted.`, 'success');
+  } catch (e) { showStatus(e.message, 'danger'); }
+}
+
+// ─── Toggle hide ──────────────────────────────────────────────────────────────
+async function toggleHide(idx) {
+  const ann = window._annData[idx];
+  const updated = window._annData.map((a, i) =>
+    i === idx ? { ...a, hide: !a.hide } : a
+  );
+  const action = ann.hide ? 'shown' : 'hidden';
+  showStatus('Saving to GitHub…', 'info');
+  try {
+    await saveAnnouncements(updated, window._annSha, `${action === 'hidden' ? 'Hide' : 'Show'} announcement: ${ann.id}`);
+    window._annData = updated;
+    renderList(updated);
+    showStatus(`&#10003; "${ann.id}" is now ${action}.`, 'success');
+  } catch (e) { showStatus(e.message, 'danger'); }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function showStatus(msg, type) {
+  const area = document.getElementById('statusArea');
+  area.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${msg}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
+}
+
+function togglePanel(id) {
+  const p = document.getElementById(id);
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+function previewImage(inputId, previewId) {
+  inputId   = inputId   || 'img_file';
+  previewId = previewId || 'img_preview';
+  const file    = document.getElementById(inputId).files[0];
+  const preview = document.getElementById(previewId);
+  if (!file) { preview.style.display = 'none'; return; }
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; preview.style.display = ''; };
+  reader.readAsDataURL(file);
+}
+
+// ─── Modal helpers (no Bootstrap JS required) ────────────────────────────────
+function showModal() {
+  const el = document.getElementById('editModal');
+  el.style.display = 'block';
+  setTimeout(() => el.classList.add('show'), 10);
+  document.body.classList.add('modal-open');
+  let bd = document.getElementById('_editBd');
+  if (!bd) {
+    bd = document.createElement('div');
+    bd.id = '_editBd';
+    bd.className = 'modal-backdrop fade';
+    document.body.appendChild(bd);
+  }
+  setTimeout(() => bd.classList.add('show'), 10);
+}
+
+function hideModal() {
+  const el = document.getElementById('editModal');
+  el.classList.remove('show');
+  setTimeout(() => { el.style.display = 'none'; }, 150);
+  document.body.classList.remove('modal-open');
+  const bd = document.getElementById('_editBd');
+  if (bd) { bd.classList.remove('show'); setTimeout(() => bd.remove(), 150); }
+}
+
+// ─── Edit ────────────────────────────────────────────────────────────────────
+let _editIdx = null;
+
+function isoToInputs(iso) {
+  if (!iso) return { date: '', time: '' };
+  const [date, rest] = iso.substring(0, 16).split('T');
+  return { date, time: rest || '' };
+}
+
+function openEdit(idx) {
+  _editIdx = idx;
+  const a    = window._annData[idx];
+  const type = a.type || 'text';
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  let title = 'Edit Announcement';
+  let body  = '';
+
+  if (type === 'text') {
+    title = 'Edit Text Announcement';
+    const s = isoToInputs(a.startDate);
+    const e = isoToInputs(a.endDate);
+    body = `
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">ID</label>
+          <input type="text" id="e_id" class="form-control" value="${a.id}" readonly>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Message</label>
+          <textarea id="e_msg" class="form-control" rows="3">${(a.message || '').replace(/</g,'&lt;')}</textarea>
+        </div>
+        <div class="col-md-3"><label class="form-label">Start date</label>
+          <input type="date" id="e_sd" class="form-control" value="${s.date}"></div>
+        <div class="col-md-3"><label class="form-label">Start time</label>
+          <input type="time" id="e_st" class="form-control" value="${s.time}"></div>
+        <div class="col-md-3"><label class="form-label">End date</label>
+          <input type="date" id="e_ed" class="form-control" value="${e.date}"></div>
+        <div class="col-md-3"><label class="form-label">End time</label>
+          <input type="time" id="e_et" class="form-control" value="${e.time}"></div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="e_special" ${a.isSpecial ? 'checked' : ''}>
+            <label class="form-check-label" for="e_special">Special announcement</label>
+          </div>
+        </div>
+      </div>`;
+
+  } else if (type === 'image') {
+    title = 'Edit Image Announcement';
+    const s   = isoToInputs(a.startDate);
+    const e   = isoToInputs(a.endDate);
+    const dc  = a.displayCondition || {};
+    const img = (a.images || [])[0] || '';
+    body = `
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">ID</label>
+          <input type="text" id="e_id" class="form-control" value="${a.id}" readonly>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Current image</label><br>
+          ${img ? `<img src="${img}" style="max-height:80px;border-radius:4px;border:1px solid #ddd" class="mb-1">` : '<span class="text-muted small">none</span>'}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Replace image <small class="text-muted">(leave empty to keep current)</small></label>
+          <input type="file" id="e_file" class="form-control" accept="image/*" onchange="previewImage('e_file','e_preview')">
+          <img id="e_preview" class="img-preview mt-2" style="display:none">
+        </div>
+        <div class="col-md-3"><label class="form-label">Start date</label>
+          <input type="date" id="e_sd" class="form-control" value="${s.date}"></div>
+        <div class="col-md-3"><label class="form-label">Start time</label>
+          <input type="time" id="e_st" class="form-control" value="${s.time}"></div>
+        <div class="col-md-3"><label class="form-label">End date</label>
+          <input type="date" id="e_ed" class="form-control" value="${e.date}"></div>
+        <div class="col-md-3"><label class="form-label">End time</label>
+          <input type="time" id="e_et" class="form-control" value="${e.time}"></div>
+        <div class="col-md-3">
+          <label class="form-label">Frequency <small class="text-muted">(mins)</small></label>
+          <input type="number" id="e_freq" class="form-control" value="${dc.frequency ?? 1}" min="1">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Duration <small class="text-muted">(secs)</small></label>
+          <input type="number" id="e_dur" class="form-control" value="${dc.duration ?? 60}" min="5">
+        </div>
+        <div class="col-12">
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="e_special" ${a.isSpecial ? 'checked' : ''}>
+            <label class="form-check-label" for="e_special">Special</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="e_avoid" ${dc.avoidJamaahTime ? 'checked' : ''}>
+            <label class="form-check-label" for="e_avoid">Avoid Jamaah times</label>
+          </div>
+        </div>
+      </div>`;
+
+  } else if (type === 'recurring_weekly') {
+    title = 'Edit Recurring Weekly Announcement';
+    const dc  = a.displayCondition || {};
+    const img = (a.images || [])[0] || '';
+    body = `
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">ID</label>
+          <input type="text" id="e_id" class="form-control" value="${a.id}" readonly>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Day of week</label>
+          <select id="e_day" class="form-select">
+            ${days.map((d, i) => `<option value="${i}"${a.dayOfWeek === i ? ' selected' : ''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Frequency <small class="text-muted">(mins)</small></label>
+          <input type="number" id="e_freq" class="form-control" value="${dc.frequency ?? 1}" min="1">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Duration <small class="text-muted">(secs)</small></label>
+          <input type="number" id="e_dur" class="form-control" value="${dc.duration ?? 60}" min="5">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Current image</label><br>
+          ${img ? `<img src="${img}" style="max-height:80px;border-radius:4px;border:1px solid #ddd" class="mb-1"><div class="small text-muted">${img}</div>` : '<span class="text-muted small">none</span>'}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Replace image <small class="text-muted">(leave empty to keep current)</small></label>
+          <input type="file" id="e_file" class="form-control" accept="image/*" onchange="previewImage('e_file','e_preview')">
+          <img id="e_preview" class="img-preview mt-2" style="display:none">
+        </div>
+        <div class="col-12">
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="e_special" ${a.isSpecial ? 'checked' : ''}>
+            <label class="form-check-label" for="e_special">Special</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="e_avoid" ${dc.avoidJamaahTime ? 'checked' : ''}>
+            <label class="form-check-label" for="e_avoid">Avoid Jamaah times</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Seasonal timing <small class="text-muted">(advanced — JSON)</small></label>
+          <textarea id="e_seasonal" class="form-control font-monospace" rows="8"
+            style="font-size:.8rem">${JSON.stringify(a.seasonalTiming || {}, null, 2)}</textarea>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('editModalTitle').textContent = title;
+  document.getElementById('editModalBody').innerHTML = body;
+  showModal();
+}
+
+async function saveEdit() {
+  const a    = window._annData[_editIdx];
+  const type = a.type || 'text';
+  let updated;
+
+  if (type === 'text') {
+    const sd = document.getElementById('e_sd').value;
+    const st = document.getElementById('e_st').value;
+    const ed = document.getElementById('e_ed').value;
+    const et = document.getElementById('e_et').value;
+    updated = {
+      ...a,
+      message:   document.getElementById('e_msg').value.trim(),
+      startDate: `${sd}T${st}:00+01:00`,
+      endDate:   `${ed}T${et}:00+01:00`,
+      isSpecial: document.getElementById('e_special').checked,
+    };
+
+  } else if (type === 'image') {
+    const file = document.getElementById('e_file').files[0];
+    let images = a.images || [];
+    if (file) {
+      showStatus('Uploading new image…', 'info');
+      try { images = [await uploadImage(file)]; }
+      catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
+    }
+    const sd = document.getElementById('e_sd').value;
+    const st = document.getElementById('e_st').value;
+    const ed = document.getElementById('e_ed').value;
+    const et = document.getElementById('e_et').value;
+    updated = {
+      ...a,
+      startDate: `${sd}T${st}:00+01:00`,
+      endDate:   `${ed}T${et}:00+01:00`,
+      displayCondition: {
+        ...(a.displayCondition || {}),
+        frequency:       parseInt(document.getElementById('e_freq').value, 10) || 1,
+        duration:        parseInt(document.getElementById('e_dur').value, 10) || 60,
+        avoidJamaahTime: document.getElementById('e_avoid').checked,
+      },
+      images,
+      isSpecial: document.getElementById('e_special').checked,
+    };
+
+  } else if (type === 'recurring_weekly') {
+    const file = document.getElementById('e_file').files[0];
+    let images = a.images || [];
+    if (file) {
+      showStatus('Uploading new image…', 'info');
+      try { images = [await uploadImage(file)]; }
+      catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
+    }
+    let seasonal = a.seasonalTiming;
+    try { seasonal = JSON.parse(document.getElementById('e_seasonal').value); }
+    catch (_) { showStatus('Invalid JSON in Seasonal timing — fix and try again.', 'danger'); return; }
+    updated = {
+      ...a,
+      dayOfWeek: parseInt(document.getElementById('e_day').value, 10),
+      displayCondition: {
+        ...(a.displayCondition || {}),
+        frequency:       parseInt(document.getElementById('e_freq').value, 10) || 1,
+        duration:        parseInt(document.getElementById('e_dur').value, 10) || 60,
+        avoidJamaahTime: document.getElementById('e_avoid').checked,
+      },
+      images,
+      seasonalTiming: seasonal,
+      isSpecial: document.getElementById('e_special').checked,
+    };
+  }
+
+  showStatus('Saving to GitHub…', 'info');
+  try {
+    const list = window._annData.map((item, i) => i === _editIdx ? updated : item);
+    await saveAnnouncements(list, window._annSha, `Edit announcement: ${a.id}`);
+    window._annData = list;
+    hideModal();
+    renderList(list);
+    showStatus(`&#10003; "${a.id}" updated.`, 'success');
+  } catch (e) { showStatus(e.message, 'danger'); }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+showTokenState();
+loadAnnouncements();
+</script>
+</body>
+</html>

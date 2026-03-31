@@ -156,6 +156,25 @@ def get_csv():
         return Response('', mimetype='text/plain', status=404)
 
 
+@app.route('/manage/announcements/')
+def manage_announcements():
+    return render_template('manage/announcements.html')
+
+
+@app.route('/api/announcements')
+def get_announcements():
+    """Serve the local announcements.json as fallback when GitHub token not set."""
+    import os
+    from flask import Response
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'announcements.json')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='application/json')
+    except FileNotFoundError:
+        return Response('[]', mimetype='application/json', status=404)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
 
