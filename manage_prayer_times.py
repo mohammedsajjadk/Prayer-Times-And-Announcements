@@ -219,40 +219,62 @@ Instructions:
     print(f"✓ Prayer times have been appended to {CSV_FILE}")
 
 def validate_prayer_times():
-    """Validate prayer times for consistency."""
+    """Validate prayer times using PrayerTimeValidator."""
     if not os.path.exists(CSV_FILE):
         print(f"Error: {CSV_FILE} not found!")
         return
-    
+
+    from prayer_time_validator import PrayerTimeValidator
+
     print("\n" + "="*60)
     print("VALIDATING PRAYER TIMES")
     print("="*60)
-    
-    with open(CSV_FILE, 'r') as f:
-        reader = csv.reader(f)
-        header = next(reader)
-        
-        errors = []
-        row_num = 1
-        
-        for row in reader:
-            row_num += 1
-            if len(row) < 13:
-                errors.append(f"Row {row_num}: Incomplete data (expected 13 columns, got {len(row)})")
-            
-            # Check time format
-            for i in range(2, 13):
-                if row[i] and not re.match(r'^\d{2}:\d{2}$', row[i]):
-                    errors.append(f"Row {row_num}, Column {i}: Invalid time format '{row[i]}'")
-    
-    if errors:
-        print(f"\nFound {len(errors)} errors:")
-        for error in errors[:10]:  # Show first 10 errors
-            print(f"  - {error}")
-        if len(errors) > 10:
-            print(f"  ... and {len(errors) - 10} more errors")
-    else:
-        print("\n✓ All prayer times are valid!")
+
+    # Find out which months are available in the CSV
+    with open(CSV_FILE, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        available_months = sorted({int(row['MONTH']) for row in reader})
+
+    if not available_months:
+        print("\nNo data found in the CSV file.")
+        return
+
+    month_names = ["", "January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"]
+
+    print(f"\nAvailable months: {', '.join(f'{m} ({month_names[m]})' for m in available_months)}")
+    print("\nOptions:")
+    print("  • Enter a month number (1-12) to validate a specific month")
+    print("  • Enter 'all' to validate every available month")
+    print("  • Enter 'back' to return to the menu")
+
+    validator = PrayerTimeValidator(CSV_FILE)
+
+    while True:
+        choice = input("\nYour choice: ").strip().lower()
+
+        if choice == 'back':
+            break
+        elif choice == 'all':
+            for month in available_months:
+                results = validator.validate_month(month)
+                validator.print_validation_report(results)
+            break
+        else:
+            try:
+                month = int(choice)
+                if month < 1 or month > 12:
+                    print("Please enter a number between 1 and 12.")
+                    continue
+                results = validator.validate_month(month)
+                if "error" in results:
+                    print(f"\n  {results['error']}")
+                    print(f"  Available months: {', '.join(str(m) for m in available_months)}")
+                else:
+                    validator.print_validation_report(results)
+                break
+            except ValueError:
+                print("Invalid input. Enter a month number, 'all', or 'back'.")
 
 def main_menu():
     """Display main menu and handle user choice."""
