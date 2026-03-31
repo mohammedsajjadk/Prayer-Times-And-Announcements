@@ -200,6 +200,64 @@ const API             = 'https://api.github.com';
 
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
+const REF_LABELS = {
+  fajrBeginning:    'Fajr Start',
+  fajrJamaah:       'Fajr Jamaah',
+  sunriseBeginning: 'Sunrise',
+  zohrBeginning:    'Dhuhr Start',
+  zohrJamaah:       'Dhuhr Jamaah',
+  asarBeginning:    'Asar Start',
+  asarJamaah:       'Asar Jamaah',
+  magribBeginning:  'Maghrib Start',
+  magribJamaah:     'Maghrib Jamaah',
+  ishaBeginning:    'Isha Start',
+  ishaJamaah:       'Isha Jamaah',
+};
+
+// "magribJamaah", 12  →  "Maghrib Jamaah +12 min"  (zero offset omitted)
+function fmtRef(ref, offset) {
+  const label = REF_LABELS[ref] || ref;
+  return (offset != null && offset !== 0) ? `${label} +${offset} min` : label;
+}
+
+// seasonalTiming object → HTML rows  ("All year: ..." when both seasons match)
+function fmtSeasonal(st) {
+  if (!st) return '';
+  const row = s => {
+    const d = st[s];
+    if (!d || !d.startReference || !d.endReference) return null;
+    return `${fmtRef(d.startReference, d.startOffset)} → ${fmtRef(d.endReference, d.endOffset)}`;
+  };
+  const sum = row('summer'), win = row('winter');
+  if (!sum && !win) return '';
+  if (sum === win) return `<div class="text-muted">All year: ${sum}</div>`;
+  let out = '';
+  if (sum) out += `<div><span class="badge text-bg-warning me-1">Summer</span>${sum}</div>`;
+  if (win) out += `<div><span class="badge text-bg-info me-1">Winter</span>${win}</div>`;
+  return out;
+}
+
+// displayCondition → short parenthesised note
+function fmtDC(dc) {
+  if (!dc) return '';
+  const parts = [];
+  if (dc.frequency) parts.push(`every ${dc.frequency} min`);
+  if (dc.duration)  parts.push(`shown ${dc.duration}s`);
+  if (dc.avoidJamaahTime) parts.push('avoids Jamaah');
+  return parts.length ? `<span class="text-muted small">(${parts.join(', ')})</span>` : '';
+}
+
+// ISO string → "1 Apr 2026, 04:00"
+function fmtIso(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+  } catch (_) { return iso.substring(0, 16).replace('T', ' '); }
+}
+
 // ─── Token ────────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('gh_token') || ''; }
 function saveToken() {
@@ -329,23 +387,33 @@ function renderList(items) {
     let detail = '';
     if (type === 'control') {
       detail = `<span class="text-muted">${a.description || ''}</span>`;
+
     } else if (type === 'recurring_weekly') {
-      const day = DAYS[a.dayOfWeek] || a.dayOfWeek;
-      const imgs = (a.images || []).map(i =>
+      const day      = DAYS[a.dayOfWeek] || a.dayOfWeek;
+      const imgs     = (a.images || []).map(i =>
         `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
       ).join('');
-      detail = `<div>Every <strong>${day}</strong></div>${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+      const seasonal = fmtSeasonal(a.seasonalTiming);
+      const dc       = fmtDC(a.displayCondition);
+      detail = `
+        <div>Every <strong>${day}</strong> ${dc}</div>
+        ${seasonal ? `<div class="mt-1">${seasonal}</div>` : ''}
+        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+
     } else if (type === 'image') {
       const imgs = (a.images || []).map(i =>
         `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
       ).join('');
+      const dc = fmtDC(a.displayCondition);
       detail = `
-        <div><small>${a.startDate || ''} → ${a.endDate || ''}</small></div>
+        <div>${fmtIso(a.startDate)} → ${fmtIso(a.endDate)} ${dc}</div>
         ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+
     } else {
       // text
+      const specBadge = a.isSpecial ? '<span class="badge text-bg-danger me-1">Special</span>' : '';
       detail = `
-        <div><small>${a.startDate || ''} → ${a.endDate || ''}</small></div>
+        <div>${specBadge}${fmtIso(a.startDate)} → ${fmtIso(a.endDate)}</div>
         <div class="mt-1">${a.message || ''}</div>`;
     }
 
