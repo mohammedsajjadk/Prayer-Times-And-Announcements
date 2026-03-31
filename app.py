@@ -136,6 +136,26 @@ def index():
 def get_config():
     return jsonify(config)
 
+
+@app.route('/manage/')
+def manage_index():
+    return render_template('manage/index.html')
+
+
+@app.route('/api/csv')
+def get_csv():
+    """Serve the local prayer_times.csv so the browser can display it as fallback."""
+    import os
+    from flask import Response
+    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'prayer_times.csv')
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/plain')
+    except FileNotFoundError:
+        return Response('', mimetype='text/plain', status=404)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
 
