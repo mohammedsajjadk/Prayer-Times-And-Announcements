@@ -5,8 +5,8 @@
 ### Prerequisites
 ```bash
 # Ensure virtual environment is activated
-cd C:\Sajjad\prayer_times_project_2
-.\venv\Scripts\activate
+cd C:\Sajjad\Git\Personal\prayer-times
+.\.venv\Scripts\activate
 
 # Install test dependencies (already installed)
 pip install pytest pytest-flask pytest-mock pytest-cov
@@ -78,14 +78,14 @@ start htmlcov/index.html
 
 ### Current Status (Latest Run)
 - **Total Tests**: 77 Python tests
-- **Passing**: 74 tests (96%)
-- **Failing**: 3 tests (Flask route integration)
+- **Passing**: 77 tests (100%)
+- **Failing**: 0 tests
 - **Coverage**: 95%
 
 ### Module Breakdown
 | Module | Tests | Status | Coverage |
 |--------|-------|--------|----------|
-| App | 20 | 17/20 ✅ | 98% |
+| App | 20 | 20/20 ✅ | 98% |
 | Parser | 24 | 24/24 ✅ | 83% |
 | Validator | 33 | 33/33 ✅ | 82% |
 
@@ -132,17 +132,17 @@ yarn install
 Run all Python tests:
 ```bash
 # Using the configured Python environment
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_*.py
+python -m pytest tests/test_*.py
 
 # With coverage report
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_*.py --cov=. --cov-report=html
+python -m pytest tests/test_*.py --cov=. --cov-report=html
 
 # Run specific test file
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_app.py
+python -m pytest tests/test_app.py
 
 # Run specific test class or method
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_app.py::TestLoadPrayerTimes
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_app.py::TestLoadPrayerTimes::test_load_prayer_times_success
+python -m pytest tests/test_app.py::TestLoadPrayerTimes
+python -m pytest tests/test_app.py::TestLoadPrayerTimes::test_load_prayer_times_success
 ```
 
 ### JavaScript Tests (when Node.js is available)
@@ -168,17 +168,17 @@ npx jest --testNamePattern="Time Utilities"
 
 #### Test the Flask Application (app.py)
 ```bash
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_app.py -v
+python -m pytest tests/test_app.py -v
 ```
 
 #### Test the Prayer Time Parser (prayer_time_parser.py)
 ```bash
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_prayer_time_parser.py -v
+python -m pytest tests/test_prayer_time_parser.py -v
 ```
 
 #### Test the Prayer Time Validator (prayer_time_validator.py)
 ```bash
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest tests/test_prayer_time_validator.py -v
+python -m pytest tests/test_prayer_time_validator.py -v
 ```
 
 ## Test Coverage
@@ -291,16 +291,16 @@ tests/
 ### Running Tests with Debug Output
 ```bash
 # Verbose output
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest -v -s
+python -m pytest -v -s
 
 # Show print statements
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest -s
+python -m pytest -s
 
 # Stop on first failure
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest -x
+python -m pytest -x
 
 # Run last failed tests only
-C:/Sajjad/prayer_times_project_2/venv/Scripts/python.exe -m pytest --lf
+python -m pytest --lf
 ```
 
 ### Common Issues and Solutions

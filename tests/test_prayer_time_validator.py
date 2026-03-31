@@ -313,9 +313,9 @@ class TestGetExpectedPattern:
         assert validator._get_expected_pattern(12, 'fajr') == "increment"
         assert validator._get_expected_pattern(8, 'sunrise') == "increment"
         
-        # January-June: decrement
+        # January-May: decrement; June is a transition month
         assert validator._get_expected_pattern(1, 'fajr') == "decrement"
-        assert validator._get_expected_pattern(6, 'fajr') == "decrement"
+        assert validator._get_expected_pattern(6, 'fajr') == "either"  # solstice transition
         assert validator._get_expected_pattern(3, 'sunrise') == "decrement"
     
     def test_zohr_asar_patterns(self, validator):
@@ -337,9 +337,9 @@ class TestGetExpectedPattern:
         assert validator._get_expected_pattern(11, 'magrib') == "decrement"
         assert validator._get_expected_pattern(9, 'isha') == "decrement"
         
-        # Rest: increment
+        # Rest: increment; June is a transition month
         assert validator._get_expected_pattern(1, 'magrib') == "increment"
-        assert validator._get_expected_pattern(6, 'magrib') == "increment"
+        assert validator._get_expected_pattern(6, 'magrib') == "either"  # solstice transition
         assert validator._get_expected_pattern(12, 'isha') == "increment"
 
 
@@ -390,7 +390,7 @@ class TestZohrJamaahValidation:
             
             violation = result['violations'][0]
             assert violation['date'] == 15  # First date in the data
-            assert violation['expected_time'] == "14:00"  # May is after clock forward
+            assert violation['expected_time'] == "14:00 or 14:15"  # May is after clock forward
             assert violation['actual_time'] == "13:15"
 
 

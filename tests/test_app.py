@@ -235,14 +235,12 @@ class TestFlaskApp:
                 mock_datetime.timedelta = timedelta  # Use real timedelta
                 
                 # Mock the addition operations
+                # Note: timedelta has no .hours attribute; use .days to distinguish
                 def mock_add(self, other):
-                    if isinstance(other, timedelta):
-                        if other.days == 1:
-                            return mock_tomorrow
-                        elif other.hours == 1 or other.hours == 0:
-                            return mock_now
+                    if isinstance(other, timedelta) and other.days == 1:
+                        return mock_tomorrow
                     return mock_now
-                
+
                 type(mock_now).__add__ = mock_add
                 
                 with patch('app.is_ireland_dst', return_value=False):
@@ -278,12 +276,13 @@ class TestFlaskApp:
                 type(mock_now).__add__ = mock_add
                 
                 with patch('app.is_ireland_dst', return_value=False):
-                    with patch('app.calculate_important_times') as mock_calc:
-                        mock_calc.return_value = {'sehri_ends': '05:20', 'sunrise': '07:25', 'noon': '12:40'}
-                        response = client.get('/')
-                        
-                        # Should still return 200 but with None for today's prayer times
-                        assert response.status_code == 200
+                    with patch('app.get_islamic_date', return_value='20 Ramadan 1445'):
+                        with patch('app.calculate_important_times') as mock_calc:
+                            mock_calc.return_value = {'sehri_ends': '05:20', 'sunrise': '07:25', 'noon': '12:40'}
+                            response = client.get('/')
+
+                            # Should still return 200 but with None for today's prayer times
+                            assert response.status_code == 200
     
     def test_index_route_dst_handling(self, client):
         """Test proper handling of Irish Summer Time"""
@@ -313,8 +312,10 @@ class TestFlaskApp:
                 
                 # Test with DST enabled
                 with patch('app.is_ireland_dst', return_value=True):
-                    response = client.get('/')
-                    assert response.status_code == 200
+                    with patch('app.get_islamic_date', return_value='18 Dhul Hijjah 1445'):
+                        with patch('app.calculate_important_times', return_value={'sehri_ends': '03:50', 'sunrise': '05:50', 'noon': '13:20'}):
+                            response = client.get('/')
+                            assert response.status_code == 200
 
 
 class TestErrorHandling:
