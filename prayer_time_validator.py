@@ -124,6 +124,17 @@ class PrayerTimeValidator:
                         "expected": "decrement (0-5 minutes)",
                         "actual": f"{'increment' if diff > 0 else 'decrement'} ({abs(diff)} minutes)"
                     })
+            elif expected_pattern == "either":
+                # Transition month — allow small moves in either direction
+                if abs(diff) > 5:
+                    violations.append({
+                        "date": i + 1,
+                        "previous_time": self._minutes_to_time(prev_time),
+                        "current_time": self._minutes_to_time(curr_time),
+                        "difference_minutes": diff,
+                        "expected": "small change either direction (0-5 minutes)",
+                        "actual": f"{'increment' if diff > 0 else 'decrement'} ({abs(diff)} minutes)"
+                    })
         
         return {
             "is_valid": len(violations) == 0,
@@ -135,15 +146,23 @@ class PrayerTimeValidator:
     def _get_expected_pattern(self, month: int, prayer_type: str) -> str:
         """Determine expected increment/decrement pattern based on month and prayer type"""
         if prayer_type in ['fajr', 'sunrise']:
-            # July-December: increment, January-June: decrement
+            # June is a transition month: times decrease until ~June 21 (summer
+            # solstice) then start increasing, so small moves either way are valid.
+            if month == 6:
+                return "either"
+            # July-December: increment, January-May: decrement
             return "increment" if month >= 7 else "decrement"
         elif prayer_type in ['zohr', 'asar']:
             # August-November: decrement, rest: increment
             return "decrement" if 8 <= month <= 11 else "increment"
         elif prayer_type in ['magrib', 'isha']:
+            # June is also a transition month: Magrib peaks around the summer
+            # solstice so late June can already be decreasing.
+            if month == 6:
+                return "either"
             # July-November: decrement, rest: increment
             return "decrement" if 7 <= month <= 11 else "increment"
-        
+
         return "increment"  # default
     
     def _time_to_minutes(self, time_str: str) -> int:
@@ -173,20 +192,24 @@ class PrayerTimeValidator:
             zohr_jamaah = row['ZOHR JAMAAH']
             zohr_jamaah_minutes = self._time_to_minutes(zohr_jamaah)
             
-            # Determine expected time based on month and Irish clock rules
+            # Determine expected time based on month and Irish clock rules.
+            # Multiple valid jamaah times exist — 14:15 is also an accepted BST
+            # time and 13:00 is valid in winter.
             if self._is_after_clock_forward(month, date):
-                expected_time = "14:00"
-                expected_minutes = 14 * 60  # 840 minutes
+                valid_minutes = {14 * 60, 14 * 60 + 15}  # 14:00 or 14:15
+                expected_time = "14:00 or 14:15"
+                clock_reason = "After Irish clock forward"
             else:
-                expected_time = "13:15"
-                expected_minutes = 13 * 60 + 15  # 795 minutes
-            
-            if zohr_jamaah_minutes != expected_minutes:
+                valid_minutes = {13 * 60 + 15, 13 * 60}  # 13:15 or 13:00
+                expected_time = "13:15 or 13:00"
+                clock_reason = "Before Irish clock forward"
+
+            if zohr_jamaah_minutes not in valid_minutes:
                 violations.append({
                     "date": date,
                     "expected_time": expected_time,
                     "actual_time": zohr_jamaah,
-                    "reason": "After Irish clock forward" if expected_time == "14:00" else "Before Irish clock forward"
+                    "reason": clock_reason
                 })
         
         return {
