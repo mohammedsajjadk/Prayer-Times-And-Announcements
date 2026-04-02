@@ -20,8 +20,8 @@
   },
   {
     "id": "clocks_backward_2025",
-    "startDate": "2026-10-24T01:00:00+01:00",
-    "endDate": "2026-10-24T23:59:59+01:00",
+    "startDate": "2026-10-23T01:00:00+01:00",
+    "endDate": "2026-10-24T23:59:00+01:00",
     "message": "REMEMBER CLOCKS GO BACKWARD 1 HOUR THIS SUNDAY",
     "isSpecial": true
   },
