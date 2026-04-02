@@ -3,6 +3,29 @@
  * Coordinates the initialization and updates of all other modules
  */
 
+// Default settings — used when settings.json cannot be loaded
+var DEFAULT_SETTINGS = {
+  scheduledRefreshTimes: [
+    {h:0,m:0},{h:3,m:30},{h:6,m:30},{h:10,m:30},{h:12,m:30},
+    {h:14,m:12},{h:16,m:30},{h:17,m:30},{h:18,m:30},{h:19,m:45},{h:21,m:15}
+  ],
+  adhkar: {
+    delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90,
+    fridayZohrSummer: '14:10', fridayZohrWinter: '13:42'
+  }
+};
+
+// Check if (h, m) matches the current Irish time within a 2-second window
+function isScheduledRefreshTime(h, m, irishH, irishM, irishS) {
+  return irishH === h && irishM === m && irishS <= 2;
+}
+
+// Load settings.json from GitHub/local; fall back to DEFAULT_SETTINGS silently
+fetch('/static/data/settings.json')
+  .then(function(r) { return r.json(); })
+  .then(function(s) { window.appSettings = s; })
+  .catch(function() { /* fallback to DEFAULT_SETTINGS already in place */ });
+
 // Main application object
 var app = {  // Initialize the application
   initialize: function() {
@@ -50,18 +73,11 @@ var app = {  // Initialize the application
       var irishMins = now.getUTCMinutes();
       var irishSecs = now.getUTCSeconds();
 
-      // Check for fixed scheduled refreshes
-      var shouldRefresh = (irishHours === 0 && irishMins === 0 && irishSecs <= 2) ||
-                         (irishHours === 3 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 6 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 10 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 12 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 14 && irishMins === 12 && irishSecs <= 2) ||
-                         (irishHours === 16 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 17 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 18 && irishMins === 30 && irishSecs <= 2) ||
-                         (irishHours === 19 && irishMins === 45 && irishSecs <= 2) ||
-                         (irishHours === 21 && irishMins === 15 && irishSecs <= 2);
+      // Check for fixed scheduled refreshes (times from settings.json)
+      var refreshTimes = (window.appSettings || DEFAULT_SETTINGS).scheduledRefreshTimes;
+      var shouldRefresh = refreshTimes.some(function(t) {
+        return isScheduledRefreshTime(t.h, t.m, irishHours, irishMins, irishSecs);
+      });
 
       // Check for Friday 5-minute refresh between 13:48 and 15:45
       var currentDay = testMode.enabled ? testMode.dayOfWeek : now.getUTCDay();

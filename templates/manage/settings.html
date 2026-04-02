@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings Admin</title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous">
+  <style>
+    body { background: #f5f5f5; }
+    .navbar-brand { font-weight: 700; }
+    .refresh-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .refresh-row input[type=time] { max-width: 130px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container-lg">
+    <span class="navbar-brand">&#9881;&#65039; Settings Admin</span>
+    <div class="d-flex gap-2">
+      <a href="/manage/" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
+      <a href="/manage/announcements/" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
+      <a href="/" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-lg" style="max-width:760px">
+
+  <!-- Token -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h6 class="card-title mb-2">GitHub Token</h6>
+      <div id="tokenSetSection">
+        <div class="input-group mb-2" style="max-width:520px">
+          <input type="password" id="tokenInput" class="form-control"
+                 placeholder="Paste your GitHub fine-grained token">
+          <button class="btn btn-primary" onclick="saveToken()">Save</button>
+        </div>
+        <small class="text-muted">Saved only in your browser. Needs <em>Contents: Read and write</em>.</small>
+      </div>
+      <div id="tokenSavedSection" style="display:none">
+        <span class="text-success fw-semibold">&#10003; Token saved</span>
+        <button class="btn btn-sm btn-outline-danger ms-3" onclick="clearToken()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusArea"></div>
+
+  <!-- ── Section 1: Scheduled Page Refreshes ──────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Scheduled Page Refresh Times</strong>
+      <button class="btn btn-sm btn-outline-primary" onclick="addRefreshRow()">&#43; Add time</button>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        The display page reloads itself at each of these times every day (Irish time).
+        This forces it to pick up fresh prayer time data.
+      </p>
+      <div id="refreshList"><!-- rows injected by JS --></div>
+    </div>
+  </div>
+
+  <!-- ── Section 2: Adhkar Display ────────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>Adhkar Display Timing</strong></div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        After each Jamaah prayer the Adhkar poster is shown automatically.
+        The two posters are displayed back-to-back within the display window.
+      </p>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">
+            Delay after Jamaah
+            <small class="text-muted d-block">minutes before poster appears</small>
+          </label>
+          <div class="input-group">
+            <input type="number" id="adhkar_delay" class="form-control" min="0" max="60" value="8">
+            <span class="input-group-text">min</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">
+            Total display window
+            <small class="text-muted d-block">how long both posters show</small>
+          </label>
+          <div class="input-group">
+            <input type="number" id="adhkar_window" class="form-control" min="1" max="30" value="3"
+                   oninput="updatePoster2Label()">
+            <span class="input-group-text">min</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">
+            Poster 1 shown for
+            <small class="text-muted d-block">rest goes to Poster 2</small>
+          </label>
+          <div class="input-group">
+            <input type="number" id="adhkar_p1" class="form-control" min="5" max="300" value="90"
+                   oninput="updatePoster2Label()">
+            <span class="input-group-text">sec</span>
+          </div>
+          <div class="form-text" id="p2Label">Poster 2: 90 sec</div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">
+            Friday Dhuhr — Summer time
+            <small class="text-muted d-block">Irish Summer Time (BST+1)</small>
+          </label>
+          <input type="time" id="adhkar_fri_summer" class="form-control" value="14:10">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">
+            Friday Dhuhr — Winter time
+            <small class="text-muted d-block">Irish Standard Time (GMT)</small>
+          </label>
+          <input type="time" id="adhkar_fri_winter" class="form-control" value="13:42">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-5">
+    <button class="btn btn-success" onclick="saveSettings()">Save to GitHub</button>
+    <button class="btn btn-outline-secondary" onclick="loadSettings()">Reload from GitHub</button>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+const REPO          = 'mohammedsajjadk/prayer-times';
+const BRANCH        = 'main';
+const SETTINGS_PATH = 'static/data/settings.json';
+const API           = 'https://api.github.com';
+
+// ─── Token ────────────────────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('gh_token') || ''; }
+function saveToken() {
+  const t = document.getElementById('tokenInput').value.trim();
+  if (!t) { showStatus('Please paste a token first.', 'warning'); return; }
+  localStorage.setItem('gh_token', t);
+  document.getElementById('tokenInput').value = '';
+  showTokenState();
+  loadSettings();
+}
+function clearToken() { localStorage.removeItem('gh_token'); showTokenState(); loadSettings(); }
+function showTokenState() {
+  const has = !!getToken();
+  document.getElementById('tokenSetSection').style.display = has ? 'none' : '';
+  document.getElementById('tokenSavedSection').style.display = has ? '' : 'none';
+}
+
+// ─── GitHub helpers ───────────────────────────────────────────────────────────
+async function ghGet(path) {
+  const token = getToken();
+  return fetch(`${API}/repos/${REPO}/contents/${path}?ref=${BRANCH}`, {
+    headers: {
+      ...(token ? { Authorization: `token ${token}` } : {}),
+      Accept: 'application/vnd.github+json',
+    },
+  });
+}
+
+async function ghPut(path, b64, sha, msg) {
+  const token = getToken();
+  if (!token) throw new Error('No GitHub token saved.');
+  const body = { message: msg, content: b64, branch: BRANCH };
+  if (sha) body.sha = sha;
+  const resp = await fetch(`${API}/repos/${REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const e = await resp.json().catch(() => ({}));
+    throw new Error(`GitHub error (${resp.status}): ${e.message || 'unknown'}`);
+  }
+  return resp;
+}
+
+// ─── Load ─────────────────────────────────────────────────────────────────────
+let _sha = null;
+
+async function loadSettings() {
+  showStatus('Loading…', 'info');
+  let settings;
+  try {
+    if (getToken()) {
+      const resp = await ghGet(SETTINGS_PATH);
+      if (resp.ok) {
+        const data = await resp.json();
+        _sha = data.sha;
+        const text = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+        settings = JSON.parse(text);
+      }
+    }
+    if (!settings) {
+      const resp = await fetch('/api/settings');
+      settings = await resp.json();
+    }
+    populateForm(settings);
+    showStatus('Loaded.', 'success');
+  } catch (e) {
+    showStatus('Could not load settings: ' + e.message, 'danger');
+  }
+}
+
+function populateForm(s) {
+  // Refresh times
+  const list = document.getElementById('refreshList');
+  list.innerHTML = '';
+  (s.scheduledRefreshTimes || []).forEach(t => addRefreshRow(t));
+
+  // Adhkar
+  const a = s.adhkar || {};
+  document.getElementById('adhkar_delay').value      = a.delayAfterJamaah      ?? 8;
+  document.getElementById('adhkar_window').value     = a.displayWindowMinutes  ?? 3;
+  document.getElementById('adhkar_p1').value         = a.poster1Seconds        ?? 90;
+  document.getElementById('adhkar_fri_summer').value = a.fridayZohrSummer      || '14:10';
+  document.getElementById('adhkar_fri_winter').value = a.fridayZohrWinter      || '13:42';
+  updatePoster2Label();
+}
+
+// ─── Refresh row helpers ──────────────────────────────────────────────────────
+function addRefreshRow(t) {
+  const list = document.getElementById('refreshList');
+  const row  = document.createElement('div');
+  row.className = 'refresh-row';
+  const h = String((t && t.h != null) ? t.h : 0).padStart(2, '0');
+  const m = String((t && t.m != null) ? t.m : 0).padStart(2, '0');
+  row.innerHTML = `
+    <input type="time" class="form-control refresh-time" value="${h}:${m}">
+    <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&#10005;</button>`;
+  list.appendChild(row);
+}
+
+function getRefreshTimes() {
+  return Array.from(document.querySelectorAll('.refresh-time')).map(el => {
+    const [h, m] = el.value.split(':').map(Number);
+    return { h, m };
+  }).filter(t => !isNaN(t.h) && !isNaN(t.m));
+}
+
+// ─── Save ─────────────────────────────────────────────────────────────────────
+async function saveSettings() {
+  const p1  = parseInt(document.getElementById('adhkar_p1').value, 10) || 90;
+  const win = parseInt(document.getElementById('adhkar_window').value, 10) || 3;
+  if (p1 >= win * 60) {
+    showStatus(`Poster 1 seconds (${p1}s) must be less than the total window (${win * 60}s).`, 'warning');
+    return;
+  }
+
+  const settings = {
+    scheduledRefreshTimes: getRefreshTimes(),
+    adhkar: {
+      delayAfterJamaah:     parseInt(document.getElementById('adhkar_delay').value, 10) || 8,
+      displayWindowMinutes: win,
+      poster1Seconds:       p1,
+      fridayZohrSummer:     document.getElementById('adhkar_fri_summer').value || '14:10',
+      fridayZohrWinter:     document.getElementById('adhkar_fri_winter').value || '13:42',
+    },
+  };
+
+  showStatus('Saving to GitHub…', 'info');
+  try {
+    const b64  = btoa(unescape(encodeURIComponent(JSON.stringify(settings, null, 2))));
+    const resp = await ghPut(SETTINGS_PATH, b64, _sha, 'Update settings.json');
+    const data = await resp.json();
+    if (data.content && data.content.sha) _sha = data.content.sha;
+    showStatus('&#10003; Settings saved to GitHub.', 'success');
+  } catch (e) {
+    showStatus(e.message, 'danger');
+  }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function updatePoster2Label() {
+  const p1  = parseInt(document.getElementById('adhkar_p1').value, 10) || 0;
+  const win = (parseInt(document.getElementById('adhkar_window').value, 10) || 3) * 60;
+  const p2  = win - p1;
+  document.getElementById('p2Label').textContent =
+    p2 > 0 ? `Poster 2: ${p2} sec` : 'Poster 1 exceeds total window!';
+  document.getElementById('p2Label').className =
+    p2 > 0 ? 'form-text' : 'form-text text-danger';
+}
+
+function showStatus(msg, type) {
+  document.getElementById('statusArea').innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show">
+      ${msg}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+showTokenState();
+loadSettings();
+</script>
+</body>
+</html>

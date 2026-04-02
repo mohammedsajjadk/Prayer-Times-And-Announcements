@@ -923,7 +923,8 @@ var announcementModule = {
       var now = new Date();
       var currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       var elapsedSeconds = currentTotalSeconds - (imageData.adhkarStartSeconds || 0);
-      var adhkarImage = (elapsedSeconds < 90) ? imageData.schedule[0] : imageData.schedule[1];
+      var _p1secs = ((window.appSettings || DEFAULT_SETTINGS).adhkar.poster1Seconds || 90);
+      var adhkarImage = (elapsedSeconds < _p1secs) ? imageData.schedule[0] : imageData.schedule[1];
       console.log("DEBUG ADHKAR: elapsedSeconds:", elapsedSeconds, "- showing:", adhkarImage.imagePath);
       this.displaySingleImage(
         adhkarImage.imagePath,
@@ -1420,8 +1421,11 @@ var announcementModule = {
     var result = { shouldDisplay: false };
     
     // For Friday Zohr: display at specific times
+    var _adhkarCfg = (window.appSettings || DEFAULT_SETTINGS).adhkar;
     if (dayOfWeek === 5) { // Friday
-      var fridayZohrTime = isIrishSummerTime ? timeUtils.timeToMinutes("14:10") : timeUtils.timeToMinutes("13:42");
+      var fridayZohrTime = isIrishSummerTime
+        ? timeUtils.timeToMinutes(_adhkarCfg.fridayZohrSummer || '14:10')
+        : timeUtils.timeToMinutes(_adhkarCfg.fridayZohrWinter || '13:42');
       var fridayZohrEndTime = fridayZohrTime + 3; // Display for 3 minutes
       
       console.log("DEBUG ADHKAR: Friday check - fridayZohrTime:", fridayZohrTime, "fridayZohrEndTime:", fridayZohrEndTime);
@@ -1433,9 +1437,9 @@ var announcementModule = {
       }
     }
     
-    // For other prayers: display Jamaah + 8 minutes
-    var adhkarDelay = 8; // minutes after Jamaah
-    var adhkarDuration = 3; // minutes to display
+    // For other prayers: display Jamaah + N minutes
+    var adhkarDelay    = _adhkarCfg.delayAfterJamaah      || 8;
+    var adhkarDuration = _adhkarCfg.displayWindowMinutes  || 3;
     
     var jamaahList = [
       { name: 'fajrJamaah', time: jamaahTimes.fajrJamaah, excludeFriday: false },
