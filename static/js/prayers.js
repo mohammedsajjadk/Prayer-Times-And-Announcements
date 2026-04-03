@@ -203,14 +203,10 @@ var prayerModule = {
     var isIrishSummerTime = dateUtils.isIrelandDST(now);
 
     // Set Jumuah time based on whether it's Summer Time or Winter Time
-    var jumuahTime;
-    if (isIrishSummerTime) {
-      // Summer Time
-      jumuahTime = "13:20";
-    } else {
-      // Winter Time
-      jumuahTime = "13:20";
-    }
+    var _jumuahCfg = (window.appSettings || DEFAULT_SETTINGS).jumuah;
+    var jumuahTime = isIrishSummerTime
+      ? (_jumuahCfg.summer || '13:45')
+      : (_jumuahCfg.winter || '13:20');
 
     // Get the Jumuah time element
     var jumuahElement = document.querySelector(".jamaah .prayer-time-value:nth-child(7)");

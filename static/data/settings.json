@@ -1,4 +1,8 @@
 {
+  "jumuah": {
+    "summer": "13:45",
+    "winter": "13:20"
+  },
   "scheduledRefreshTimes": [
     {
       "h": 0,

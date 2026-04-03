@@ -51,6 +51,31 @@
 
   <div id="statusArea"></div>
 
+  <!-- ── Section 0: Jumuah Times ─────────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>Jumu'ah Time</strong></div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        <strong>Summer (BST)</strong> = last Sunday of March → last Sunday of October.<br>
+        <strong>Winter (GMT)</strong> = last Sunday of October → last Sunday of March.
+      </p>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Summer time (BST)
+            <small class="text-muted d-block">Late Mar → Late Oct</small>
+          </label>
+          <input type="time" id="jumuah_summer" class="form-control" value="13:45">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Winter time (GMT)
+            <small class="text-muted d-block">Late Oct → Late Mar</small>
+          </label>
+          <input type="time" id="jumuah_winter" class="form-control" value="13:20">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Section 1: Scheduled Page Refreshes ──────────────────────────────── -->
   <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -217,6 +242,11 @@ async function loadSettings() {
 }
 
 function populateForm(s) {
+  // Jumuah times
+  const j = s.jumuah || {};
+  document.getElementById('jumuah_summer').value = j.summer || '13:45';
+  document.getElementById('jumuah_winter').value = j.winter || '13:20';
+
   // Refresh times
   const list = document.getElementById('refreshList');
   list.innerHTML = '';
@@ -262,6 +292,10 @@ async function saveSettings() {
   }
 
   const settings = {
+    jumuah: {
+      summer: document.getElementById('jumuah_summer').value || '13:45',
+      winter: document.getElementById('jumuah_winter').value || '13:20',
+    },
     scheduledRefreshTimes: getRefreshTimes(),
     adhkar: {
       delayAfterJamaah:     parseInt(document.getElementById('adhkar_delay').value, 10) || 8,

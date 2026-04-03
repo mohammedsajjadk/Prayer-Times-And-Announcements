@@ -9,6 +9,7 @@ var DEFAULT_SETTINGS = {
     {h:0,m:0},{h:3,m:30},{h:6,m:30},{h:10,m:30},{h:12,m:30},
     {h:14,m:12},{h:16,m:30},{h:17,m:30},{h:18,m:30},{h:19,m:45},{h:21,m:15}
   ],
+  jumuah: { summer: '13:45', winter: '13:20' },
   adhkar: {
     delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90,
     fridayZohrSummer: '14:10', fridayZohrWinter: '13:42'
@@ -45,7 +46,8 @@ var app = {  // Initialize the application
     var isIrishSummerTime = dateUtils.isIrelandDST(now);
     var jumuahElement = document.querySelector(".jamaah .prayer-time-value:nth-child(7)");
     if (jumuahElement) {
-      var jumuahTime = isIrishSummerTime ? "13:45" : "13:20";
+      var _jCfg = (window.appSettings || DEFAULT_SETTINGS).jumuah;
+      var jumuahTime = isIrishSummerTime ? (_jCfg.summer || '13:45') : (_jCfg.winter || '13:20');
       jumuahElement.setAttribute("data-time", jumuahTime);
       jumuahElement.textContent = timeUtils.formatTimeFor12Hour(jumuahTime);
     }
