@@ -58,14 +58,14 @@
     },
     {
       "h": 20,
-      "m": 30
+      "m": 5
     }
   ],
   "adhkar": {
     "delayAfterJamaah": 8,
     "displayWindowMinutes": 4,
     "poster1Seconds": 120,
-    "fridayZohrSummer": "14:10",
+    "fridayZohrSummer": "14:08",
     "fridayZohrWinter": "13:42"
   }
 }
