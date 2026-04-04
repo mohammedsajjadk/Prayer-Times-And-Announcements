@@ -163,8 +163,90 @@ def convert_prayer_times(input_text: str) -> str:
     parser = PrayerTimeParser()
     return parser.parse_input(input_text)
 
-# Example usage
-if __name__ == "__main__":
+
+class DublinPrayerTimeParser:
+    """
+    Parser for Dublin Mosque timetable format.
+
+    INPUT FORMAT (tab-separated, no month header):
+        Day  Date  Fajr  Sunrise  Dhuhr  Asr  Maghrib  Isha  [empty/Iqama+10]
+        Wed  1     5:19  6:58     13:31  17:02  20:01  21:33
+
+    - Month is supplied as an integer parameter (not read from the pasted text).
+    - All Jamaat times = Beginning time + 10 minutes (computed automatically).
+    - Times like "5:19" are normalised to "05:19".
+    - Output: same 13-column CSV as TraleeParser.
+    """
+
+    def parse_input(self, input_text: str, month: int) -> str:
+        lines = input_text.strip().split('\n')
+        csv_rows = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            # Skip header line if present (starts with "Day" or non-numeric first token)
+            parts = re.split(r'\t+|\s{2,}| {1,}', line)
+            if not parts or not parts[1].isdigit():
+                continue
+            row = self._parse_row(parts, month)
+            if row:
+                csv_rows.append(row)
+
+        header = ("MONTH,DATE,FAJR BEGINNING,SUNRISE BEGINNING,ZOHR BEGINNING,"
+                  "ASAR BEGINNING,MAGRIB BEGINNING,ISHA BEGINNING,"
+                  "FAJR JAMAAH,ZOHR JAMAAH,ASAR JAMAAH,MAGRIB JAMAAH,ISHA JAMAAH")
+        csv_output = header + "\n"
+        for row in csv_rows:
+            csv_output += ",".join(map(str, row)) + "\n"
+        return csv_output
+
+    def _parse_row(self, parts: List, month: int) -> Optional[List]:
+        # Expected: [Day, Date, Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha, ...]
+        if len(parts) < 8:
+            return None
+        try:
+            date = int(parts[1])
+        except ValueError:
+            return None
+
+        fajr_b   = self._normalise(parts[2])
+        sunrise  = self._normalise(parts[3])
+        zohr_b   = self._normalise(parts[4])
+        asar_b   = self._normalise(parts[5])
+        magrib_b = self._normalise(parts[6])
+        isha_b   = self._normalise(parts[7])
+
+        # Jamaat = Beginning + 10 minutes
+        fajr_j   = self._add_minutes(fajr_b, 10)
+        zohr_j   = self._add_minutes(zohr_b, 10)
+        asar_j   = self._add_minutes(asar_b, 10)
+        magrib_j = self._add_minutes(magrib_b, 10)
+        isha_j   = self._add_minutes(isha_b, 10)
+
+        return [month, date, fajr_b, sunrise, zohr_b, asar_b, magrib_b, isha_b,
+                fajr_j, zohr_j, asar_j, magrib_j, isha_j]
+
+    def _normalise(self, time_str: str) -> str:
+        """Pad single-digit hours: '5:19' → '05:19'."""
+        time_str = time_str.strip()
+        if ':' in time_str:
+            h, m = time_str.split(':', 1)
+            return f"{int(h):02d}:{m.zfill(2)}"
+        return time_str
+
+    def _add_minutes(self, time_str: str, minutes: int) -> str:
+        """Add minutes to a HH:MM string, wrapping at 24h."""
+        h, m = map(int, time_str.split(':'))
+        total = h * 60 + m + minutes
+        return f"{(total // 60) % 24:02d}:{total % 60:02d}"
+
+
+def convert_dublin_prayer_times(input_text: str, month: int) -> str:
+    parser = DublinPrayerTimeParser()
+    return parser.parse_input(input_text, month)
+
+
     # You can paste your input here and run the script
     sample_input = """Your prayer time data here"""
     

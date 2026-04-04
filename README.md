@@ -1,38 +1,23 @@
 # Prayer Times Display System
 
-A comprehensive digital display system for mosques to show prayer times, announcements, and Adhkar.
+A multi-mosque digital display system for showing prayer times, announcements, and Adhkar. Each mosque gets its own live display URL and management portal.
+
+## Live URLs
+
+| Mosque | Live Display | Management Portal |
+|--------|-------------|-------------------|
+| Tralee | `/` | `/manage/` |
+| Dublin | `/dublin` | `/dublin/manage/` |
 
 ## Features
 
-✨ **Dynamic Prayer Times Display**
-- Automatic daily prayer time updates
-- Supports both Beginning and Jamaah times
-- Islamic and Gregorian date display
+- Real-time prayer times display (Beginning + Jamaah)
+- Islamic and Gregorian date
 - Multiple theme options
-
-📢 **Announcement Management**
+- Automatic Adhkar poster after each Jamaah
 - Text and image announcements
-- Date-based and recurring weekly schedules
-- Seasonal timing support
-- Priority and visibility controls
-
-🕌 **Adhkar Display**
-- Automatic display after each Jamaah
-- Customizable timing and duration
-- Special Friday Zohr scheduling
-- Image poster support
-
-⚙️ **Mosque Configurable**
-- Easy configuration for any mosque
-- Timezone and DST support
-- Customizable Jumuah times
-- Theme customization
-
-🛠️ **Management Tools**
-- Interactive announcement manager
-- Prayer time import tool
-- Configuration manager
-- Backup and restore utilities
+- Web-based prayer time management (add, edit, delete months)
+- GitHub-backed CSV storage (all changes auto-committed)
 
 ## Quick Start
 
@@ -44,289 +29,170 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Configure Your Mosque
-
-```powershell
-python configure_mosque.py
-```
-
-Follow the prompts to set:
-- Mosque name and location
-- Timezone
-- Jumuah times (summer/winter)
-- Adhkar settings
-
-### 3. Add Prayer Times
+### 2. Add Prayer Times
 
 ```powershell
 python manage_prayer_times.py
 ```
 
-- Copy prayer times from your Excel spreadsheet
-- Paste when prompted
-- System automatically converts and validates times
+Select mosque (1 = Tralee, 2 = Dublin), then paste from your spreadsheet. Times are automatically converted, ditto marks expanded, and appended to the CSV.
 
-### 4. Add Announcements
-
-```powershell
-python manage_announcements.py
-```
-
-- Add text or image announcements
-- Set start/end dates and times
-- Configure display frequency
-
-### 5. Run the Application
+### 3. Run the Application
 
 ```powershell
 python app.py
 ```
 
-Open browser to: `http://localhost:5000`
+Open browser to `http://localhost:5000` (Tralee) or `http://localhost:5000/dublin` (Dublin).
 
 ## File Structure
 
 ```
 prayer-times/
-├── app.py                      # Main Flask application
-├── mosque_config.json          # Mosque configuration
-├── manage.py                   # Master management console
-├── manage_announcements.py     # Announcement manager
-├── manage_prayer_times.py      # Prayer time manager
-├── configure_mosque.py         # Mosque configuration tool
+├── app.py                          # Flask application (all routes)
+├── prayer_time_parser.py           # Tralee + Dublin parsers
+├── prayer_time_validator.py        # CSV validation utilities
+├── manage_prayer_times.py          # CLI prayer time importer
+├── manage_announcements.py         # CLI announcement manager
+├── configure_mosque.py             # Interactive settings editor
 │
 ├── data/
-│   └── prayer_times.csv        # Prayer times database
+│   ├── tralee/
+│   │   └── prayer_times.csv        # Tralee prayer times
+│   └── dublin/
+│       └── prayer_times.csv        # Dublin prayer times
 │
 ├── static/
-│   ├── css/
-│   │   └── styles.css         # Styling
+│   ├── styles.css
+│   ├── fonts/
+│   ├── images/                     # Announcement & Adhkar posters
 │   ├── js/
-│   │   ├── main.js            # Main application logic
-│   │   ├── announcements.js   # Announcement handling
-│   │   ├── prayers.js         # Prayer time logic
-│   │   └── themes.js          # Theme management
-│   ├── images/
-│   │   └── Adhkar.jpg         # Adhkar poster (REQUIRED)
+│   │   ├── main.js                 # App bootstrap, settings fetch
+│   │   ├── prayers.js              # Prayer time display logic
+│   │   ├── announcements.js        # Announcement + Adhkar engine
+│   │   ├── time.js                 # Clock and date helpers
+│   │   ├── themes.js               # Theme switcher
+│   │   └── utils.js                # Shared utilities
 │   └── data/
-│       └── announcements.json # Announcements database
+│       ├── tralee/
+│       │   ├── settings.json       # Tralee settings (Jumuah, Adhkar, …)
+│       │   └── announcements.json  # Tralee announcements
+│       └── dublin/
+│           ├── settings.json       # Dublin settings
+│           └── announcements.json  # Dublin announcements
 │
 └── templates/
-    └── index.html             # Main display template
+    ├── index.html                  # Live display (shared, mosque-aware)
+    └── manage/
+        └── index.html              # Web management portal
 ```
 
-## Management Tools
+## Web Management Portal
 
-### Master Console (`manage.py`)
+Visit `/manage/` (Tralee) or `/dublin/manage/` (Dublin) in a browser.
 
-Central hub for all management tasks:
-```powershell
-python manage.py
-```
+**What you can do:**
+- View prayer times grouped by month
+- Add a new month by pasting from Excel
+- Edit any row in-place (click the ✏️ button)
+- Delete an entire month
+- All changes are committed to GitHub automatically
 
-**Features:**
-- Access all management tools
-- View system status
-- Quick help and documentation
+## CLI Tools
 
-### Announcement Manager (`manage_announcements.py`)
+### Prayer Time Importer
 
-Manage announcements interactively:
-```powershell
-python manage_announcements.py
-```
-
-**Options:**
-1. View all announcements
-2. Add new text announcement
-3. Add new image announcement
-4. Delete announcement
-5. Toggle visibility (hide/show)
-
-### Prayer Time Manager (`manage_prayer_times.py`)
-
-Import and manage prayer times:
 ```powershell
 python manage_prayer_times.py
 ```
 
-**Options:**
-1. View current times
-2. Add new month from spreadsheet
-3. Validate prayer times
+Prompts for mosque selection at startup. Options:
+1. View current prayer times
+2. Add new month (paste from spreadsheet)
+3. Validate CSV data
 4. Create backup
+5. Switch mosque
 
-### Mosque Configuration (`configure_mosque.py`)
+**Tralee format** — Paste including the month header row and column headers:
+```
+April 2025
+Date    Fajr Begin  ...
+1       04:32       ...
+```
 
-Configure mosque-specific settings:
+**Dublin format** — Paste tab-separated data without a month header (month is selected separately). Jamaah times are computed automatically as Beginning + 10 min.
+
+### Announcement Manager
+
+```powershell
+python manage_announcements.py
+```
+
+Options: view, add text, add image, delete, toggle visibility.
+
+### Mosque Configuration
+
 ```powershell
 python configure_mosque.py
 ```
 
-**Settings:**
-- Mosque name and location
-- Timezone and DST rules
-- Jumuah times (summer/winter)
-- Adhkar display settings
-- Display customization
+Interactive editor for Jumuah times, Adhkar settings, and timezone.
 
-## Configuration Guide
+## Settings Files
 
-### Mosque Settings (`mosque_config.json`)
+Each mosque has its own `static/data/{slug}/settings.json`. Key fields:
 
 ```json
 {
-  "mosque": {
-    "name": "Your Masjid Name",
-    "location": "Your City, Country",
-    "displayName": "Display Name"
-  },
-  "timezone": {
-    "name": "Your/Timezone",
-    "hasDST": true,
-    "standardOffset": 0,
-    "dstOffset": 1
-  },
   "jumuah": {
-    "summer": {"time": "13:45"},
-    "winter": {"time": "13:20"}
+    "summer": "13:45",
+    "winter": "13:20"
   },
   "adhkar": {
-    "enabled": true,
-    "delayMinutes": 8,
-    "durationMinutes": 4,
-    "fridayZohrSpecialTimes": {
-      "summer": "14:10",
-      "winter": "13:42"
-    }
-  }
-}
-```
-
-### Adding Prayer Times
-
-1. Open your Excel spreadsheet with prayer times
-2. Select the entire table (including month name and headers)
-3. Copy (Ctrl+C)
-4. Run `python manage_prayer_times.py`
-5. Select option 2 (Add new month from spreadsheet)
-6. Paste the data
-7. Type `END` and press Enter
-8. System automatically:
-   - Extracts month
-   - Converts time formats
-   - Handles ditto marks (")
-   - Validates data
-   - Appends to CSV
-
-### Adding Announcements
-
-**Text Announcement:**
-```json
-{
-  "id": "event_2027",
-  "startDate": "2027-03-15T09:00:00+01:00",
-  "endDate": "2027-03-15T18:00:00+01:00",
-  "message": "Your announcement message",
-  "isSpecial": true
-}
-```
-
-**Image Announcement:**
-```json
-{
-  "id": "poster_2027",
-  "startDate": "2027-03-15T09:00:00+01:00",
-  "endDate": "2027-03-15T18:00:00+01:00",
-  "type": "image",
-  "images": ["/static/images/YourPoster.jpg"],
-  "displayCondition": {
-    "frequency": 1,
-    "duration": 60,
-    "avoidJamaahTime": true
+    "delayAfterJamaah": 8,
+    "displayWindowMinutes": 4,
+    "poster1Seconds": 120
   },
-  "isSpecial": true
-}
-```
-
-**Recurring Weekly:**
-```json
-{
-  "id": "weekly_program",
-  "type": "recurring_weekly",
-  "dayOfWeek": 5,
-  "seasonalTiming": {
-    "summer": {
-      "startReference": "fajrBeginning",
-      "endReference": "ishaJamaah",
-      "endOffset": 15
-    },
-    "winter": {
-      "startReference": "fajrBeginning",
-      "endReference": "ishaJamaah",
-      "endOffset": 15
-    }
-  },
-  "images": ["/static/images/Program.jpg"]
+  "scheduledRefreshTimes": ["00:01", "06:00"]
 }
 ```
 
 ## Adhkar System
 
-The system automatically displays the Adhkar poster (`/static/images/Adhkar.jpg`):
+Adhkar posters are displayed automatically after each Jamaah prayer:
 
-**Post-Jamaah Display:**
-- Displays 8 minutes after each Jamaah prayer
-- Duration: 4 minutes
-- Applies to: Fajr, Zohr, Asr, Maghrib, Isha
-- Excludes: Friday Zohr (has special timing)
+- **Delay**: configurable (default 8 min after Jamaah)
+- **Window**: configurable (default 4 min total)
+- **Two posters**: poster 1 shown for `poster1Seconds`, poster 2 for the remainder
+- **Friday Zohr**: uses special times (`fridayZohrSummer` / `fridayZohrWinter`)
 
-**Friday Zohr Special Times:**
-- Summer (DST): 14:10
-- Winter: 13:42
+Poster images are loaded from `/static/images/` — update the paths in `settings.json`.
 
-**Note:** Make sure `static/images/Adhkar.jpg` exists!
+## Adding a New Mosque
 
-## Common Timezones
-
-| Region | Timezone |
-|--------|----------|
-| UK | Europe/London |
-| Ireland | Europe/Dublin |
-| UAE | Asia/Dubai |
-| Pakistan | Asia/Karachi |
-| India | Asia/Kolkata |
-| US Eastern | America/New_York |
-| US Central | America/Chicago |
-| US Pacific | America/Los_Angeles |
+1. Create `data/{slug}/prayer_times.csv` (copy headers from an existing one)
+2. Create `static/data/{slug}/settings.json` and `announcements.json`
+3. Add an entry to `MOSQUE_CONFIGS` in `app.py`
+4. Add routes: `@app.route('/{slug}')` and `@app.route('/{slug}/manage/')` following the existing pattern
 
 ## Troubleshooting
 
-### Adhkar not displaying?
-1. Check `static/images/Adhkar.jpg` exists
-2. Verify `adhkar.enabled` is `true` in `mosque_config.json`
-3. Confirm timing settings
+**Prayer times not showing?**  
+Check `data/{slug}/prayer_times.csv` has a row for today's month and date.
 
-### Prayer times not updating?
-1. Run `python manage_prayer_times.py` → option 3 to validate
-2. Check `data/prayer_times.csv` format
-3. Ensure times are in HH:MM format
+**Adhkar not appearing?**  
+Verify the poster image paths in `static/data/{slug}/settings.json` exist under `static/images/`.
 
-### Announcements not showing?
-1. Check announcement dates are correct
-2. Verify `hide` is not set to `true`
-3. Confirm timezone settings
+**Announcements not showing?**  
+Check dates and that `hide` is not `true` in `static/data/{slug}/announcements.json`.
 
-## Support and Customization
-
-For mosque-specific customizations or support, you can:
-1. Use `configure_mosque.py` for basic settings
-2. Edit `mosque_config.json` directly for advanced options
-3. Modify theme colors in `static/styles.css`
+**Edit button not working on /manage?**  
+Ensure JavaScript is enabled. The edit modal uses vanilla JS — no Bootstrap JS dependency.
 
 ## License
 
-This project was designed and created by [Mohammed Sajjad Khatib](https://www.linkedin.com/in/mohammedsajjadk/), and is free for use by any mosque.
+Designed and created by [Mohammed Sajjad Khatib](https://www.linkedin.com/in/mohammedsajjadk/), free for use by any mosque.
+
 ---
 
 **May Allah accept this work and make it a means of benefit for the Muslim community. Aameen.**

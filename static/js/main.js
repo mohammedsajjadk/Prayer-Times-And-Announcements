@@ -22,7 +22,7 @@ function isScheduledRefreshTime(h, m, irishH, irishM, irishS) {
 }
 
 // Load settings.json from GitHub/local; fall back to DEFAULT_SETTINGS silently
-fetch('/static/data/settings.json')
+fetch('/static/data/' + (window.MOSQUE_SLUG || 'tralee') + '/settings.json')
   .then(function(r) { return r.json(); })
   .then(function(s) { window.appSettings = s; })
   .catch(function() { /* fallback to DEFAULT_SETTINGS already in place */ });

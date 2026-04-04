@@ -21,9 +21,9 @@
   <div class="container-lg">
     <span class="navbar-brand">&#9881;&#65039; Settings Admin</span>
     <div class="d-flex gap-2">
-      <a href="/manage/" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
-      <a href="/manage/announcements/" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
-      <a href="/" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+      <a href="{{ mosque.manageBase }}" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
+      <a href="{{ mosque.announcementsManage }}" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
     </div>
   </div>
 </nav>
@@ -162,7 +162,8 @@
 <script>
 const REPO          = 'mohammedsajjadk/prayer-times';
 const BRANCH        = 'main';
-const SETTINGS_PATH = 'static/data/settings.json';
+const SETTINGS_PATH = '{{ mosque.settingsPath }}';
+const API_SET_URL   = '{{ mosque.apiBase }}api/settings';
 const API           = 'https://api.github.com';
 
 // ─── Token ────────────────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ async function loadSettings() {
       }
     }
     if (!settings) {
-      const resp = await fetch('/api/settings');
+      const resp = await fetch(API_SET_URL);
       settings = await resp.json();
     }
     populateForm(settings);

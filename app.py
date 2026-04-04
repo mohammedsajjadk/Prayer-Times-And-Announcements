@@ -1,34 +1,49 @@
 import csv
 import json
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timezone, timedelta
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, Response
 from hijri_converter import convert
-from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Load mosque configuration
-def load_config():
-    try:
-        with open('mosque_config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("Warning: mosque_config.json not found, using defaults")
-        return {
-            "mosque": {"name": "Mosque", "displayName": "Mosque"},
-            "timezone": {"hasDST": True, "standardOffset": 0, "dstOffset": 1},
-            "jumuah": {"summer": {"time": "13:45"}, "winter": {"time": "13:20"}},
-            "display": {"title": "Prayer Times"}
-        }
+# ─── Mosque configurations ────────────────────────────────────────────────────
+MOSQUE_CONFIGS = {
+    'tralee': {
+        'slug': 'tralee',
+        'displayName': 'Tralee Islamic Centre',
+        'csvPath': 'data/tralee/prayer_times.csv',
+        'announcementsPath': 'static/data/tralee/announcements.json',
+        'settingsPath': 'static/data/tralee/settings.json',
+        'sehriOffset': -10,
+        'parserFormat': 'tralee',
+        'manageBase': '/manage/',
+        'announcementsManage': '/manage/announcements/',
+        'settingsManage': '/manage/settings/',
+        'apiBase': '/',
+        'liveSite': '/',
+    },
+    'dublin': {
+        'slug': 'dublin',
+        'displayName': 'Dublin Mosque',
+        'csvPath': 'data/dublin/prayer_times.csv',
+        'announcementsPath': 'static/data/dublin/announcements.json',
+        'settingsPath': 'static/data/dublin/settings.json',
+        'sehriOffset': 0,
+        'parserFormat': 'dublin',
+        'manageBase': '/dublin/manage/',
+        'announcementsManage': '/dublin/manage/announcements/',
+        'settingsManage': '/dublin/manage/settings/',
+        'apiBase': '/dublin/',
+        'liveSite': '/dublin',
+    },
+}
 
-config = load_config()
 
-
-# Load the prayer times from the CSV file
-def load_prayer_times():
+def load_prayer_times(csv_path='data/tralee/prayer_times.csv'):
     prayer_times = []
-    with open('data/prayer_times.csv', newline='') as csvfile:
+    with open(csv_path, newline='') as csvfile:
         csvreader = csv.reader(csvfile)
         next(csvreader)  # Skip header
         for row in csvreader:
@@ -55,99 +70,72 @@ def get_islamic_date(date=None):
     return formatted_hijri_date
 
 
-def calculate_important_times(prayer_times):
-    # Convert string times to datetime objects for calculations
-    # Correct indices based on your current CSV structure:
-    # [0]=MONTH, [1]=DATE, [2]=FAJR BEGINNING, [3]=SUNRISE BEGINNING, [4]=ZOHR BEGINNING, etc.
-    sehri_time = datetime.strptime(prayer_times[2], '%H:%M')
-    sunrise_time = prayer_times[3]
-    zohr_time = datetime.strptime(prayer_times[4], '%H:%M')
-
-    # Calculate Sehri ends (10 minutes before Fajr)
-    sehri_ends = (sehri_time - timedelta(minutes=10)).strftime('%H:%M')
-    # Calculate Noon (10 minutes before Zohr)
-    noon_time = (zohr_time - timedelta(minutes=10)).strftime('%H:%M')
-
+def calculate_important_times(prayer_times, sehri_offset=-10):
+    # [0]=MONTH, [1]=DATE, [2]=FAJR BEGINNING, [3]=SUNRISE, [4]=ZOHR BEGINNING ...
+    try:
+        sehri_time = datetime.strptime(prayer_times[2], '%H:%M')
+        zohr_time  = datetime.strptime(prayer_times[4], '%H:%M')
+        sehri_ends = (sehri_time + timedelta(minutes=sehri_offset)).strftime('%H:%M')
+        noon_time  = (zohr_time - timedelta(minutes=10)).strftime('%H:%M')
+    except (ValueError, TypeError):
+        sehri_ends = '--:--'
+        noon_time  = '--:--'
     return {
         'sehri_ends': sehri_ends,
-        'sunrise': sunrise_time,
+        'sunrise': prayer_times[3],
         'noon': noon_time
     }
 
 
 # To determine if a given date is in Irish Summer Time
 def is_ireland_dst(dt):
-    # Ireland's DST rules: starts last Sunday in March, ends last Sunday in October
     year = dt.year
-    # Last Sunday in March
     march_last_day = 31 - (datetime(year, 3, 31).weekday() + 1) % 7
     dst_start = datetime(year, 3, march_last_day, 1, 0, tzinfo=timezone.utc)
-    
-    # Last Sunday in October
     oct_last_day = 31 - (datetime(year, 10, 31).weekday() + 1) % 7
     dst_end = datetime(year, 10, oct_last_day, 1, 0, tzinfo=timezone.utc)
-    
     return dst_start <= dt < dst_end
 
-# Get the current time and date from the prayer times
-@app.route('/')
-def index():
-    prayer_times = load_prayer_times()
-    
-    # Determine if Ireland is currently in DST (summer time)
+
+# ─── Shared view helpers ──────────────────────────────────────────────────────
+def _index_view(mosque_slug):
+    mosque = MOSQUE_CONFIGS[mosque_slug]
+    prayer_times = load_prayer_times(mosque['csvPath'])
     now = datetime.now(timezone.utc)
     is_summer_time = is_ireland_dst(now)
-    
-    # Apply the Irish time offset
     irish_time = now + timedelta(hours=(1 if is_summer_time else 0))
-    
-    # Use Irish time for day and month
     current_month = irish_time.month
     current_day = irish_time.day
-    
-    # Get today's prayer times using both month and day
-    today_prayer_times = next((row for row in prayer_times if int(row[0]) == current_month and int(row[1]) == current_day), None)
-    
-    # Get tomorrow's date (also in Irish time)
+    today_prayer_times = next(
+        (row for row in prayer_times if int(row[0]) == current_month and int(row[1]) == current_day), None)
     tomorrow = irish_time + timedelta(days=1)
-    tomorrow_month = tomorrow.month
-    tomorrow_day = tomorrow.day
+    tomorrow_prayer_times = next(
+        (row for row in prayer_times if int(row[0]) == tomorrow.month and int(row[1]) == tomorrow.day), None)
 
-    # Get tomorrow's prayer times using both month and day
-    tomorrow_prayer_times = next((row for row in prayer_times if int(row[0]) == tomorrow_month and int(row[1]) == tomorrow_day), None)
+    # Fallback placeholder row when no data exists yet (e.g. mosque just set up)
+    _empty_row = ['0', '0', '--:--', '--:--', '--:--', '--:--', '--:--', '--:--',
+                  '--:--', '--:--', '--:--', '--:--', '--:--']
+    if today_prayer_times is None:
+        today_prayer_times = _empty_row
+    if tomorrow_prayer_times is None:
+        tomorrow_prayer_times = _empty_row
 
-    # Calculate important times
-    important_times = calculate_important_times(today_prayer_times)
-    tomorrow_important_times = calculate_important_times(tomorrow_prayer_times)
-
+    important_times = calculate_important_times(today_prayer_times, mosque['sehriOffset'])
+    tomorrow_important_times = calculate_important_times(tomorrow_prayer_times, mosque['sehriOffset'])
     return render_template('index.html',
-                         current_time=irish_time.strftime('%H:%M:%S'),
-                         current_date=irish_time.strftime('%a %d %b %Y'),
-                         islamic_date=get_islamic_date(irish_time.date()),
-                         today_prayer_times=today_prayer_times,
-                         tomorrow_prayer_times=tomorrow_prayer_times,
-                         important_times=important_times,
-                         tomorrow_important_times=tomorrow_important_times,
-                         mosque_name=config['mosque']['displayName'],
-                         page_title=config['display']['title'])
-
-# API endpoint to serve mosque configuration to frontend
-@app.route('/api/config')
-def get_config():
-    return jsonify(config)
+                           current_time=irish_time.strftime('%H:%M:%S'),
+                           current_date=irish_time.strftime('%a %d %b %Y'),
+                           islamic_date=get_islamic_date(irish_time.date()),
+                           today_prayer_times=today_prayer_times,
+                           tomorrow_prayer_times=tomorrow_prayer_times,
+                           important_times=important_times,
+                           tomorrow_important_times=tomorrow_important_times,
+                           mosque_slug=mosque_slug)
 
 
-@app.route('/manage/')
-def manage_index():
-    return render_template('manage/index.html')
-
-
-@app.route('/api/csv')
-def get_csv():
-    """Serve the local prayer_times.csv so the browser can display it as fallback."""
-    import os
-    from flask import Response
-    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'prayer_times.csv')
+def _api_csv_view(mosque_slug):
+    mosque = MOSQUE_CONFIGS[mosque_slug]
+    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), mosque['csvPath'])
     try:
         with open(csv_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -156,44 +144,88 @@ def get_csv():
         return Response('', mimetype='text/plain', status=404)
 
 
-@app.route('/manage/announcements/')
-def manage_announcements():
-    return render_template('manage/announcements.html')
-
-
-@app.route('/api/announcements')
-def get_announcements():
-    """Serve the local announcements.json as fallback when GitHub token not set."""
-    import os
-    from flask import Response
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'announcements.json')
+def _api_json_view(mosque_slug, file_key, empty_fallback='{}'):
+    mosque = MOSQUE_CONFIGS[mosque_slug]
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), mosque[file_key])
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         return Response(content, mimetype='application/json')
     except FileNotFoundError:
-        return Response('[]', mimetype='application/json', status=404)
+        return Response(empty_fallback, mimetype='application/json', status=404)
+
+
+# ─── Tralee routes ────────────────────────────────────────────────────────────
+@app.route('/')
+def index():
+    return _index_view('tralee')
+
+
+@app.route('/manage/')
+def manage_index():
+    return render_template('manage/index.html', mosque=MOSQUE_CONFIGS['tralee'])
+
+
+@app.route('/manage/announcements/')
+def manage_announcements():
+    return render_template('manage/announcements.html', mosque=MOSQUE_CONFIGS['tralee'])
 
 
 @app.route('/manage/settings/')
 def manage_settings():
-    return render_template('manage/settings.html')
+    return render_template('manage/settings.html', mosque=MOSQUE_CONFIGS['tralee'])
+
+
+@app.route('/api/csv')
+def get_csv():
+    return _api_csv_view('tralee')
+
+
+@app.route('/api/announcements')
+def get_announcements():
+    return _api_json_view('tralee', 'announcementsPath', '[]')
 
 
 @app.route('/api/settings')
 def get_settings():
-    """Serve the local settings.json as fallback when GitHub token not set."""
-    import os
-    from flask import Response
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'settings.json')
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return Response(content, mimetype='application/json')
-    except FileNotFoundError:
-        return Response('{}', mimetype='application/json', status=404)
+    return _api_json_view('tralee', 'settingsPath', '{}')
+
+
+# ─── Dublin routes ────────────────────────────────────────────────────────────
+@app.route('/dublin')
+def dublin_index():
+    return _index_view('dublin')
+
+
+@app.route('/dublin/manage/')
+def dublin_manage_index():
+    return render_template('manage/index.html', mosque=MOSQUE_CONFIGS['dublin'])
+
+
+@app.route('/dublin/manage/announcements/')
+def dublin_manage_announcements():
+    return render_template('manage/announcements.html', mosque=MOSQUE_CONFIGS['dublin'])
+
+
+@app.route('/dublin/manage/settings/')
+def dublin_manage_settings():
+    return render_template('manage/settings.html', mosque=MOSQUE_CONFIGS['dublin'])
+
+
+@app.route('/dublin/api/csv')
+def dublin_get_csv():
+    return _api_csv_view('dublin')
+
+
+@app.route('/dublin/api/announcements')
+def dublin_get_announcements():
+    return _api_json_view('dublin', 'announcementsPath', '[]')
+
+
+@app.route('/dublin/api/settings')
+def dublin_get_settings():
+    return _api_json_view('dublin', 'settingsPath', '{}')
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-

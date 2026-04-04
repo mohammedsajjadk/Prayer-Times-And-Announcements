@@ -20,9 +20,9 @@
   <div class="container-lg">
     <span class="navbar-brand">&#128197; Prayer Times Admin</span>
     <div class="d-flex gap-2">
-      <a href="/manage/announcements/" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
-      <a href="/manage/settings/" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
-      <a href="/" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+      <a href="{{ mosque.announcementsManage }}" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
+      <a href="{{ mosque.settingsManage }}" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
     </div>
   </div>
 </nav>
@@ -67,10 +67,28 @@
   <div id="addPanel" class="card mb-4 border-primary" style="display:none">
     <div class="card-header bg-primary text-white"><strong>Add a New Month</strong></div>
     <div class="card-body">
+      {% if mosque.parserFormat == 'tralee' %}
       <p class="text-muted mb-2">
         Open the Excel spreadsheet, select the <strong>entire month table</strong>
         (including the month name row at the top), copy it, and paste below.
       </p>
+      {% else %}
+      <p class="text-muted mb-2">
+        Paste the Dublin mosque timetable table (Day/Date/Fajr… columns). Select the month below first.
+      </p>
+      <div class="mb-3" style="max-width:220px">
+        <label class="form-label fw-semibold">Month</label>
+        <select id="dublinMonthSelect" class="form-select">
+          <option value="">— Select month —</option>
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      {% endif %}
       <textarea id="pasteArea" class="form-control font-monospace mb-3"
                 rows="10" placeholder="Paste here…"></textarea>
       <button class="btn btn-success me-2" onclick="addMonth()">Parse &amp; Save to GitHub</button>
@@ -85,6 +103,60 @@
 
 </div><!-- /container -->
 
+<!-- ─── Edit Prayer Times Modal ─────────────────────────────────────────── -->
+<div class="modal fade" id="editRowModal" tabindex="-1" aria-labelledby="editRowModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editRowModalLabel">Edit Prayer Times</h5>
+        <button type="button" class="btn-close" onclick="hideEditModal()"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editRowMonth">
+        <input type="hidden" id="editRowDate">
+        <p class="text-muted small mb-3" id="editRowDesc"></p>
+        <div class="row g-3">
+          <div class="col-12"><h6 class="text-secondary">Beginning Times</h6></div>
+          <div class="col-md-4"><label class="form-label">Fajr Beginning</label>
+            <input type="time" id="edit_fajr_b" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Sunrise</label>
+            <input type="time" id="edit_sunrise" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Zohr Beginning</label>
+            <input type="time" id="edit_zohr_b" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Asar Beginning</label>
+            <input type="time" id="edit_asar_b" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Magrib Beginning</label>
+            <input type="time" id="edit_magrib_b" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Isha Beginning</label>
+            <input type="time" id="edit_isha_b" class="form-control"></div>
+
+          <div class="col-12 mt-2 d-flex justify-content-between align-items-center">
+            <h6 class="text-secondary mb-0">Jamaat Times</h6>
+            {% if mosque.parserFormat == 'dublin' %}
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    onclick="autoFillJamaatPlus10()">Auto-fill Jamaat (+10 min)</button>
+            {% endif %}
+          </div>
+          <div class="col-md-4"><label class="form-label">Fajr Jamaat</label>
+            <input type="time" id="edit_fajr_j" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Zohr Jamaat</label>
+            <input type="time" id="edit_zohr_j" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Asar Jamaat</label>
+            <input type="time" id="edit_asar_j" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Magrib Jamaat</label>
+            <input type="time" id="edit_magrib_j" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label">Isha Jamaat</label>
+            <input type="time" id="edit_isha_j" class="form-control"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="hideEditModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveEditRow()">Save &amp; Commit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmX3TBQLzT2HyCrFaLMuDFHGpNap"
         crossorigin="anonymous"></script>
@@ -92,7 +164,9 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 const REPO    = 'mohammedsajjadk/prayer-times';
 const BRANCH  = 'main';
-const CSV_PATH = 'data/prayer_times.csv';
+const CSV_PATH = '{{ mosque.csvPath }}';
+const PARSER_FORMAT = '{{ mosque.parserFormat }}';
+const API_CSV_URL   = '{{ mosque.apiBase }}api/csv';
 const API     = 'https://api.github.com';
 
 const HEADERS = [
@@ -174,9 +248,29 @@ async function fetchRows() {
     } catch (_) { /* fall through to local */ }
   }
   // Fallback: read local file via Flask route
-  const res = await fetch('/api/csv');
+  const res = await fetch(API_CSV_URL);
   const text = await res.text();
   return parseCSV(text);
+}
+
+// ─── Auto-prune past months ───────────────────────────────────────────────────
+async function pruneOldMonths(rows) {
+  const now = new Date();
+  const cur = now.getMonth() + 1; // 1-based current month
+  const keep = new Set([cur, (cur % 12) + 1, ((cur + 1) % 12) + 1]);
+  const removed = [...new Set(rows.map(r => parseInt(r['MONTH'])))].filter(m => !keep.has(m));
+  if (!removed.length) return;
+  const removedNames = removed.map(m => MONTH_NAMES[m] || `Month ${m}`).join(', ');
+  const kept = rows.filter(r => keep.has(parseInt(r['MONTH'])));
+  showStatus(`Auto-pruning old months: ${removedNames}…`, 'info');
+  try {
+    await commitCSV(kept, `Auto-prune: removed ${removedNames}`);
+    _allRows = kept;
+    renderMonths(kept);
+    showStatus(`&#10003; Auto-pruned: ${removedNames} removed and committed to GitHub.`, 'success');
+  } catch (e) {
+    showStatus('Auto-prune failed: ' + e.message, 'danger');
+  }
 }
 
 // ─── Render month cards ───────────────────────────────────────────────────────
@@ -186,9 +280,11 @@ async function loadMonths() {
   try { rows = await fetchRows(); }
   catch (e) { showStatus('Could not load prayer times: ' + e.message, 'danger'); return; }
   renderMonths(rows);
+  await pruneOldMonths(rows);
 }
 
 function renderMonths(rows) {
+  _allRows = rows;  // keep in-memory copy for edit operations
   const container = document.getElementById('monthList');
   if (!rows.length) {
     container.innerHTML = '<div class="alert alert-info">No prayer times found. Use <strong>+ Add Month</strong> to get started.</div>';
@@ -222,6 +318,7 @@ function renderMonths(rows) {
                   <th>Asar B</th><th>Magrib B</th><th>Isha B</th>
                   <th>Fajr J</th><th>Zohr J</th><th>Asar J</th>
                   <th>Magrib J</th><th>Isha J</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -239,6 +336,9 @@ function renderMonths(rows) {
                     <td>${r['ASAR JAMAAH']}</td>
                     <td>${r['MAGRIB JAMAAH']}</td>
                     <td>${r['ISHA JAMAAH']}</td>
+                    <td><button class="btn btn-outline-secondary btn-sm py-0 px-1"
+                          onclick="editRow(${m}, ${r['DATE']})"
+                          title="Edit">&#9998;</button></td>
                   </tr>`).join('')}
               </tbody>
             </table>
@@ -372,7 +472,14 @@ async function addMonth() {
 
   let newRows;
   try {
-    newRows = parsePaste(text);
+    if (PARSER_FORMAT === 'dublin') {
+      const monthSel = document.getElementById('dublinMonthSelect');
+      const month = parseInt(monthSel ? monthSel.value : '', 10);
+      if (!month) { showStatus('Please select a month before parsing.', 'warning'); return; }
+      newRows = parseDublinPaste(text, month);
+    } else {
+      newRows = parsePaste(text);
+    }
   } catch (e) {
     showStatus(e.message, 'danger');
     return;
@@ -430,6 +537,140 @@ async function deleteMonth(monthNum, monthName) {
     await commitCSV(kept, `Delete ${monthName} prayer times`);
     showStatus(`&#10003; ${monthName} deleted — GitHub updated.`, 'success');
     loadMonths();
+  } catch (e) {
+    showStatus(e.message, 'danger');
+  }
+}
+
+// ─── Dublin spreadsheet parser ───────────────────────────────────────────────
+// Mirrors DublinPrayerTimeParser in prayer_time_parser.py
+function normaliseDublinTime(s) {
+  s = s.trim();
+  if (!s || !s.includes(':')) return s;
+  const [h, m] = s.split(':');
+  return String(parseInt(h, 10)).padStart(2, '0') + ':' + m.padStart(2, '0');
+}
+
+function addMinutesToTime(timeStr, mins) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  return String(Math.floor(total / 60) % 24).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+}
+
+function parseDublinPaste(text, month) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const rows = [];
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    // Split on any whitespace (tabs or multiple spaces) — Dublin format uses tabs
+    const parts = line.split(/\t+|\s{2,}|\s+/);
+    // Skip header: first token is non-numeric (e.g. "Day")
+    if (!parts[1] || isNaN(parseInt(parts[1], 10))) continue;
+    if (parts.length < 8) continue;
+    const date = parseInt(parts[1], 10);
+    if (isNaN(date)) continue;
+    const fajrB   = normaliseDublinTime(parts[2]);
+    const sunB    = normaliseDublinTime(parts[3]);
+    const zohrB   = normaliseDublinTime(parts[4]);
+    const asarB   = normaliseDublinTime(parts[5]);
+    const magribB = normaliseDublinTime(parts[6]);
+    const ishaB   = normaliseDublinTime(parts[7]);
+    rows.push({
+      'MONTH': String(month), 'DATE': String(date),
+      'FAJR BEGINNING': fajrB,    'SUNRISE BEGINNING': sunB,
+      'ZOHR BEGINNING': zohrB,    'ASAR BEGINNING': asarB,
+      'MAGRIB BEGINNING': magribB, 'ISHA BEGINNING': ishaB,
+      'FAJR JAMAAH':   addMinutesToTime(fajrB,   10),
+      'ZOHR JAMAAH':   addMinutesToTime(zohrB,   10),
+      'ASAR JAMAAH':   addMinutesToTime(asarB,   10),
+      'MAGRIB JAMAAH': addMinutesToTime(magribB, 10),
+      'ISHA JAMAAH':   addMinutesToTime(ishaB,   10),
+    });
+  }
+  if (!rows.length) throw new Error('No data rows found. Make sure the table is pasted with correct columns.');
+  return rows;
+}
+
+// ─── Vanilla modal helpers ───────────────────────────────────────────────────
+function showEditModal() {
+  var modal = document.getElementById('editRowModal');
+  modal.style.display = 'block';
+  modal.classList.add('show');
+  document.body.classList.add('modal-open');
+  var backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop fade show';
+  backdrop.id = 'editModalBackdrop';
+  document.body.appendChild(backdrop);
+}
+function hideEditModal() {
+  var modal = document.getElementById('editRowModal');
+  modal.style.display = 'none';
+  modal.classList.remove('show');
+  document.body.classList.remove('modal-open');
+  var backdrop = document.getElementById('editModalBackdrop');
+  if (backdrop) backdrop.remove();
+}
+
+// ─── Edit row (in-place) ──────────────────────────────────────────────────────
+var _allRows = [];  // in-memory copy, populated by loadMonths → renderMonths
+
+function editRow(monthNum, dateNum) {
+  const r = _allRows.find(x => parseInt(x['MONTH'],10) === monthNum && parseInt(x['DATE'],10) === dateNum);
+  if (!r) { showStatus('Row not found.', 'warning'); return; }
+  document.getElementById('editRowMonth').value = monthNum;
+  document.getElementById('editRowDate').value  = dateNum;
+  document.getElementById('editRowDesc').textContent =
+    `${MONTH_NAMES[monthNum]} ${dateNum}`;
+  document.getElementById('edit_fajr_b').value   = r['FAJR BEGINNING']    || '';
+  document.getElementById('edit_sunrise').value  = r['SUNRISE BEGINNING'] || '';
+  document.getElementById('edit_zohr_b').value   = r['ZOHR BEGINNING']    || '';
+  document.getElementById('edit_asar_b').value   = r['ASAR BEGINNING']    || '';
+  document.getElementById('edit_magrib_b').value = r['MAGRIB BEGINNING']  || '';
+  document.getElementById('edit_isha_b').value   = r['ISHA BEGINNING']    || '';
+  document.getElementById('edit_fajr_j').value   = r['FAJR JAMAAH']       || '';
+  document.getElementById('edit_zohr_j').value   = r['ZOHR JAMAAH']       || '';
+  document.getElementById('edit_asar_j').value   = r['ASAR JAMAAH']       || '';
+  document.getElementById('edit_magrib_j').value = r['MAGRIB JAMAAH']     || '';
+  document.getElementById('edit_isha_j').value   = r['ISHA JAMAAH']       || '';
+  showEditModal();
+}
+
+function autoFillJamaatPlus10() {
+  const fields = ['fajr','zohr','asar','magrib','isha'];
+  fields.forEach(p => {
+    const bVal = document.getElementById('edit_' + p + '_b').value;
+    if (bVal) document.getElementById('edit_' + p + '_j').value = addMinutesToTime(bVal, 10);
+  });
+}
+
+async function saveEditRow() {
+  const monthNum = parseInt(document.getElementById('editRowMonth').value, 10);
+  const dateNum  = parseInt(document.getElementById('editRowDate').value,  10);
+  const idx = _allRows.findIndex(x => parseInt(x['MONTH'],10) === monthNum && parseInt(x['DATE'],10) === dateNum);
+  if (idx === -1) { showStatus('Row not found.', 'danger'); return; }
+
+  _allRows[idx] = {
+    ..._allRows[idx],
+    'FAJR BEGINNING':    document.getElementById('edit_fajr_b').value,
+    'SUNRISE BEGINNING': document.getElementById('edit_sunrise').value,
+    'ZOHR BEGINNING':    document.getElementById('edit_zohr_b').value,
+    'ASAR BEGINNING':    document.getElementById('edit_asar_b').value,
+    'MAGRIB BEGINNING':  document.getElementById('edit_magrib_b').value,
+    'ISHA BEGINNING':    document.getElementById('edit_isha_b').value,
+    'FAJR JAMAAH':       document.getElementById('edit_fajr_j').value,
+    'ZOHR JAMAAH':       document.getElementById('edit_zohr_j').value,
+    'ASAR JAMAAH':       document.getElementById('edit_asar_j').value,
+    'MAGRIB JAMAAH':     document.getElementById('edit_magrib_j').value,
+    'ISHA JAMAAH':       document.getElementById('edit_isha_j').value,
+  };
+
+  hideEditModal();
+  showStatus('Committing to GitHub…', 'info');
+  try {
+    await commitCSV(_allRows, `Update prayer times: ${MONTH_NAMES[monthNum]} ${dateNum}`);
+    showStatus(`&#10003; ${MONTH_NAMES[monthNum]} ${dateNum} updated — GitHub committed.`, 'success');
+    renderMonths(_allRows);
   } catch (e) {
     showStatus(e.message, 'danger');
   }

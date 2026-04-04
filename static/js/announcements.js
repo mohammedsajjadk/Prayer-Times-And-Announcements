@@ -88,7 +88,7 @@ var announcementModule = {
 
   // Load dynamic announcements from external file
   loadDynamicAnnouncements: function () {
-    fetch("/static/data/announcements.json")
+    fetch('/static/data/' + (window.MOSQUE_SLUG || 'tralee') + '/announcements.json')
       .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok: " + response.status);
@@ -444,12 +444,17 @@ var announcementModule = {
     
     if (adhkarPosterCheck.shouldDisplay) {
       console.log("DEBUG: Adhkar poster should display - superseding all other announcements");
+      // Build schedule from settings so durations reflect mosque configuration
+      var _adhkarCfg = (window.appSettings || DEFAULT_SETTINGS).adhkar;
+      var _p1secs  = _adhkarCfg.poster1Seconds       || 90;
+      var _winsecs = (_adhkarCfg.displayWindowMinutes || 3) * 60;
+      var _p2secs  = Math.max(1, _winsecs - _p1secs);
       // Display Adhkar poster ONLY - skip all other announcements during this time
       imageData = {
         images: ['/static/images/Adhkar1.jpg', '/static/images/Adhkar2.jpg'],
         displayCondition: {
           frequency: 1,
-          duration: 180,  // 3 minutes = 180 seconds total
+          duration: _winsecs,
           avoidJamaahTime: false
         },
         isSpecial: true,
@@ -459,21 +464,21 @@ var announcementModule = {
           {
             imagePath: '/static/images/Adhkar1.jpg',
             frequency: 1,
-            duration: 90,  // 90 seconds
+            duration: _p1secs,
             avoidJamaahTime: false,
             announcementId: 'adhkar_poster_1'
           },
           {
             imagePath: '/static/images/Adhkar2.jpg',
             frequency: 1,
-            duration: 90,  // 90 seconds
+            duration: _p2secs,
             avoidJamaahTime: false,
             announcementId: 'adhkar_poster_2'
           }
         ],
         gapDuration: 0,
-        totalActiveTime: 180,
-        totalCycleTime: 180  // No gap for Adhkar
+        totalActiveTime: _winsecs,
+        totalCycleTime: _winsecs  // No gap for Adhkar
       };
       
       // Display the Adhkar poster and skip all other processing
@@ -923,12 +928,22 @@ var announcementModule = {
       var now = new Date();
       var currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       var elapsedSeconds = currentTotalSeconds - (imageData.adhkarStartSeconds || 0);
-      var _p1secs = ((window.appSettings || DEFAULT_SETTINGS).adhkar.poster1Seconds || 90);
-      var adhkarImage = (elapsedSeconds < _p1secs) ? imageData.schedule[0] : imageData.schedule[1];
-      console.log("DEBUG ADHKAR: elapsedSeconds:", elapsedSeconds, "- showing:", adhkarImage.imagePath);
+      var _adhkarCfgH = (window.appSettings || DEFAULT_SETTINGS).adhkar;
+      var _p1secs  = _adhkarCfgH.poster1Seconds       || 90;
+      var _winsecs = (_adhkarCfgH.displayWindowMinutes || 3) * 60;
+      var adhkarImage, remaining;
+      if (elapsedSeconds < _p1secs) {
+        adhkarImage = imageData.schedule[0];
+        remaining   = _p1secs - elapsedSeconds;
+      } else {
+        adhkarImage = imageData.schedule[1];
+        remaining   = _winsecs - elapsedSeconds;
+      }
+      remaining = Math.max(1, remaining);
+      console.log("DEBUG ADHKAR: elapsedSeconds:", elapsedSeconds, "remaining:", remaining, "- showing:", adhkarImage.imagePath);
       this.displaySingleImage(
         adhkarImage.imagePath,
-        adhkarImage.duration,
+        remaining,
         adhkarImage.announcementId,
         imageData.isSpecial || false
       );

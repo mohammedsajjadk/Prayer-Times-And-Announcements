@@ -1,0 +1,149 @@
+[
+  {
+    "id": "friday_tafseer_control",
+    "type": "control",
+    "description": "Controls whether Friday Tafseer announcements are shown",
+    "hide": true
+  },
+  {
+    "id": "thursday_darood_control",
+    "type": "control",
+    "description": "Controls whether Thursday Darood announcements are shown",
+    "hide": false
+  },
+  {
+    "id": "clocks_forward_2025",
+    "startDate": "2027-03-26T20:00:00+01:00",
+    "endDate": "2026-03-28T00:00:00+01:00",
+    "message": "REMEMBER CLOCKS GO FORWARD 1 HOUR THIS SUNDAY",
+    "isSpecial": true
+  },
+  {
+    "id": "clocks_backward_2025",
+    "startDate": "2026-10-23T01:00:00+01:00",
+    "endDate": "2026-10-24T23:59:00+01:00",
+    "message": "REMEMBER CLOCKS GO BACKWARD 1 HOUR THIS SUNDAY",
+    "isSpecial": true
+  },
+  {
+    "id": "tafseer_friday_recurring",
+    "type": "recurring_weekly",
+    "dayOfWeek": 5,
+    "seasonalTiming": {
+      "summer": {
+        "startReference": "fajrBeginning",
+        "endReference": "ishaJamaah",
+        "endOffset": 15
+      },
+      "winter": {
+        "startReference": "fajrBeginning",
+        "endReference": "ishaJamaah",
+        "endOffset": 15
+      }
+    },
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/Tafseer of the Quran.jpg"
+    ],
+    "isSpecial": true,
+    "hide": true
+  },
+  {
+    "id": "womens_weekly_tuesday",
+    "type": "recurring_weekly",
+    "dayOfWeek": 2,
+    "seasonalTiming": {
+      "summer": {
+        "startReference": "magribJamaah",
+        "startOffset": 12,
+        "endReference": "ishaJamaah",
+        "endOffset": 60
+      },
+      "winter": {
+        "startReference": "magribJamaah",
+        "startOffset": 12,
+        "endReference": "ishaJamaah",
+        "endOffset": 60
+      }
+    },
+    "displayCondition": {
+      "frequency": 2,
+      "duration": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/Womens Weekly.png"
+    ],
+    "isSpecial": true,
+    "hide": false
+  },
+  {
+    "id": "womens_weekly_wednesday",
+    "type": "recurring_weekly",
+    "dayOfWeek": 3,
+    "seasonalTiming": {
+      "summer": {
+        "startReference": "fajrBeginning",
+        "endReference": "zohrBeginning",
+        "endOffset": 0
+      },
+      "winter": {
+        "startReference": "fajrBeginning",
+        "endReference": "zohrBeginning",
+        "endOffset": 0
+      }
+    },
+    "displayCondition": {
+      "frequency": 2,
+      "duration": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/Womens Weekly.png"
+    ],
+    "isSpecial": true,
+    "hide": false
+  },
+  {
+    "id": "jumuah_change_summer_2026",
+    "startDate": "2026-04-01T04:00:00+01:00",
+    "endDate": "2026-04-03T14:30:00+01:00",
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/jumuah_change_summer_2026.jpg"
+    ],
+    "isSpecial": true
+  },
+  {
+    "id": "wifi_receiver",
+    "startDate": "2026-04-02T09:00:00+01:00",
+    "endDate": "2026-04-08T23:59:00+01:00",
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/wifireceiver.jpg"
+    ],
+    "isSpecial": true
+  }
+]

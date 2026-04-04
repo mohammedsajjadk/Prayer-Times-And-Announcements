@@ -25,9 +25,9 @@
   <div class="container-lg">
     <span class="navbar-brand">&#128226; Announcements Admin</span>
     <div class="d-flex gap-2">
-      <a href="/manage/" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
-      <a href="/manage/settings/" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
-      <a href="/" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+      <a href="{{ mosque.manageBase }}" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
+      <a href="{{ mosque.settingsManage }}" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
     </div>
   </div>
 </nav>
@@ -195,8 +195,9 @@
 <script>
 const REPO            = 'mohammedsajjadk/prayer-times';
 const BRANCH          = 'main';
-const JSON_PATH       = 'static/data/announcements.json';
+const JSON_PATH       = '{{ mosque.announcementsPath }}';
 const IMAGES_DIR      = 'static/images';
+const API_ANN_URL     = '{{ mosque.apiBase }}api/announcements';
 const API             = 'https://api.github.com';
 
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -321,7 +322,7 @@ async function fetchAnnouncements() {
       }
     } catch (_) {}
   }
-  const res = await fetch('/api/announcements');
+  const res = await fetch(API_ANN_URL);
   const text = await res.text();
   return { data: JSON.parse(text), sha: null };
 }

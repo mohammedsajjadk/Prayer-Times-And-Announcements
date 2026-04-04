@@ -137,9 +137,10 @@ class TestCalculateImportantTimes:
     def test_calculate_important_times_invalid_format(self):
         """Test handling of invalid time formats"""
         prayer_times = ['3', '15', 'invalid', '07:25', 'bad_time', '16:30', '18:25', '19:45']
-        
-        with pytest.raises(ValueError):
-            calculate_important_times(prayer_times)
+
+        result = calculate_important_times(prayer_times)
+        assert result['sehri_ends'] == '--:--'
+        assert result['noon'] == '--:--'
 
 
 class TestIsIrelandDst:
