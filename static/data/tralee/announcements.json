@@ -3,7 +3,13 @@
     "id": "friday_tafseer_control",
     "type": "control",
     "description": "Controls whether Friday Tafseer announcements are shown",
-    "hide": false
+    "hide": false,
+    "suspendPeriods": [
+      {
+        "start": "2026-04-06T09:00:00+01:00",
+        "end": "2026-04-12T23:59:00+01:00"
+      }
+    ]
   },
   {
     "id": "thursday_darood_control",
