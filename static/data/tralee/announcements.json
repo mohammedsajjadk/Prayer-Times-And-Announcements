@@ -137,23 +137,6 @@
     ]
   },
   {
-    "id": "jumuah_change_summer_2026",
-    "startDate": "2026-04-01T04:00:00+01:00",
-    "endDate": "2026-04-03T14:30:00+01:00",
-    "type": "image",
-    "displayCondition": {
-      "frequency": 1,
-      "duration": 60,
-      "gapBetweenImages": 60,
-      "avoidJamaahTime": true,
-      "rotateImages": true
-    },
-    "images": [
-      "/static/images/jumuah_change_summer_2026.jpg"
-    ],
-    "isSpecial": true
-  },
-  {
     "id": "wifi_receiver",
     "startDate": "2026-04-02T09:00:00+01:00",
     "endDate": "2026-04-08T23:59:00+01:00",
