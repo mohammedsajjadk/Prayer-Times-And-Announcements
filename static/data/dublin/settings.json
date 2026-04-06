@@ -7,7 +7,7 @@
   "labels": {
     "column1": "ADHAN",
     "column2": "IQAMAH",
-    "beginningColumnSize": "smaller"
+    "beginningColumnSize": "same"
   },
   "scheduledRefreshTimes": [
     {
