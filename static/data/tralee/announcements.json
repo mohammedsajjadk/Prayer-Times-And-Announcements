@@ -122,7 +122,13 @@
       "/static/images/Womens Weekly.png"
     ],
     "isSpecial": true,
-    "hide": false
+    "hide": false,
+    "suspendPeriods": [
+      {
+        "start": "2026-03-30T09:00:00+01:00",
+        "end": "2026-04-12T23:59:00+01:00"
+      }
+    ]
   },
   {
     "id": "jumuah_change_summer_2026",
