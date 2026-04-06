@@ -60,6 +60,11 @@
   <!-- Status -->
   <div id="statusArea"></div>
 
+  <!-- Local mode banner — visible on localhost when no token is set -->
+  <div id="localModeBanner" class="alert alert-info py-2 mb-3" style="display:none">
+    &#128187; <strong>Local Mode</strong> — No GitHub token set. Saves go directly to disk. Image uploads still require a token.
+  </div>
+
   <!-- Toolbar -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <h4 class="mb-0">Announcements</h4>
@@ -198,7 +203,7 @@
       <div class="modal-body" id="editModalBody"><!-- populated by JS --></div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="hideModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="saveEdit()">Save to GitHub</button>
+        <button type="button" class="btn btn-primary" id="modalSaveBtn" onclick="saveEdit()">Save to GitHub</button>
       </div>
     </div>
   </div>
@@ -214,6 +219,7 @@ const JSON_PATH       = '{{ mosque.announcementsPath }}';
 const IMAGES_DIR      = 'static/images';
 const API_ANN_URL     = '{{ mosque.apiBase }}api/announcements';
 const API             = 'https://api.github.com';
+const IS_LOCAL        = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
@@ -290,6 +296,10 @@ function showTokenState() {
   const has = !!getToken();
   document.getElementById('tokenSetSection').style.display = has ? 'none' : '';
   document.getElementById('tokenSavedSection').style.display = has ? '' : 'none';
+  const banner = document.getElementById('localModeBanner');
+  if (banner) banner.style.display = (IS_LOCAL && !has) ? '' : 'none';
+  const btn = document.getElementById('modalSaveBtn');
+  if (btn) btn.textContent = (IS_LOCAL && !has) ? '\uD83D\uDCBE Save Locally' : 'Save to GitHub';
 }
 
 // ─── GitHub helpers ───────────────────────────────────────────────────────────
@@ -343,6 +353,19 @@ async function fetchAnnouncements() {
 }
 
 async function saveAnnouncements(announcements, sha, message) {
+  // On localhost with no token: write directly to disk via the Flask POST endpoint
+  if (IS_LOCAL && !getToken()) {
+    const resp = await fetch(API_ANN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(announcements),
+    });
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error('Local save failed: ' + (e.error || resp.status));
+    }
+    return; // No SHA tracking needed for local saves
+  }
   const json = JSON.stringify(announcements, null, 2);
   const b64  = btoa(unescape(encodeURIComponent(json)));
   const resp = await ghPut(JSON_PATH, b64, sha, message);
@@ -403,7 +426,17 @@ function renderList(items) {
 
     let detail = '';
     if (type === 'control') {
-      detail = `<span class="text-muted">${a.description || ''}</span>`;
+      let windowInfo = '';
+      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
+        const now    = Date.now();
+        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
+        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
+        const badge  = active ? '<span class="badge text-bg-success me-1">Window Active</span>'
+                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming Window</span>'
+                              : '<span class="badge bg-light text-dark border me-1">Windows Expired</span>';
+        windowInfo = `<div class="mt-1 small">${badge}${a.scheduleWindows.length} window(s)</div>`;
+      }
+      detail = `<span class="text-muted">${a.description || ''}</span>${windowInfo}`;
 
     } else if (type === 'recurring_weekly') {
       const day      = DAYS[a.dayOfWeek] || a.dayOfWeek;
@@ -412,10 +445,21 @@ function renderList(items) {
       ).join('');
       const seasonal = fmtSeasonal(a.seasonalTiming);
       const dc       = fmtDC(a.displayCondition);
+      let windowBadge = '';
+      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
+        const now    = Date.now();
+        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
+        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
+        const badge  = active ? '<span class="badge text-bg-success me-1">Active</span>'
+                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming</span>'
+                              : '<span class="badge bg-light text-dark border me-1">Expired</span>';
+        windowBadge = `<div class="mt-1 small">${badge}${a.scheduleWindows.length} date window(s)</div>`;
+      }
       detail = `
         <div>Every <strong>${day}</strong> ${dc}</div>
         ${seasonal ? `<div class="mt-1">${seasonal}</div>` : ''}
-        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}
+        ${windowBadge}`;
 
     } else if (type === 'image') {
       const imgs = (a.images || []).map(i =>
@@ -474,7 +518,7 @@ function renderList(items) {
               <div class="mt-1 small">${detail}</div>
             </div>
             <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end">
-              ${type !== 'control' ? `<button class="btn btn-sm btn-outline-primary" onclick="openEdit(${idx})">Edit</button>` : ''}
+              <button class="btn btn-sm btn-outline-primary" onclick="openEdit(${idx})">Edit</button>
               <button class="btn btn-sm ${hideBtnClass}" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
               <button class="btn btn-sm btn-outline-danger" onclick="deleteAnn(${idx})">Delete</button>
             </div>
@@ -632,7 +676,9 @@ function addWindowRow(containerId) {
 function removeWindowRow(btn) {
   const row       = btn.closest('.window-row');
   const container = row.parentElement;
-  if (container.querySelectorAll('.window-row').length <= 1) {
+  // text/image add-panels require at least 1 window; edit modal allows 0 (for control/recurring_weekly)
+  const isAddPanel = container.id === 'txt_windows' || container.id === 'img_windows';
+  if (isAddPanel && container.querySelectorAll('.window-row').length <= 1) {
     alert('At least one schedule window is required.');
     return;
   }
@@ -688,6 +734,8 @@ function showModal() {
     document.body.appendChild(bd);
   }
   setTimeout(() => bd.classList.add('show'), 10);
+  // Ensure modal Save button label reflects current token state
+  showTokenState();
 }
 
 function hideModal() {
@@ -803,6 +851,7 @@ function openEdit(idx) {
     title = 'Edit Recurring Weekly Announcement';
     const dc  = a.displayCondition || {};
     const img = (a.images || [])[0] || '';
+    const hasWindows = a.scheduleWindows && a.scheduleWindows.length > 0;
     body = `
       <div class="row g-3">
         <div class="col-12">
@@ -843,9 +892,49 @@ function openEdit(idx) {
           </div>
         </div>
         <div class="col-12">
+          <label class="form-label">Date Range Windows
+            <small class="text-muted">(optional — restrict to specific date ranges in addition to seasonal timing)</small>
+          </label>
+          <div id="e_windows">${hasWindows ? buildWindowsHtmlString(a.scheduleWindows) : ''}</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addWindowRow('e_windows')">&#43; Add Window</button>
+          <small class="text-muted d-block mt-1">If set, this announcement only shows within these date ranges. Max 5.</small>
+        </div>
+        <div class="col-12">
           <label class="form-label">Seasonal timing <small class="text-muted">(advanced — JSON)</small></label>
           <textarea id="e_seasonal" class="form-control font-monospace" rows="8"
             style="font-size:.8rem">${JSON.stringify(a.seasonalTiming || {}, null, 2)}</textarea>
+        </div>
+      </div>`;
+
+  } else if (type === 'control') {
+    title = 'Edit Control Entry';
+    const hasWindows = a.scheduleWindows && a.scheduleWindows.length > 0;
+    body = `
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">ID</label>
+          <input type="text" id="e_id" class="form-control" value="${a.id}" readonly>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Description</label>
+          <input type="text" id="e_desc" class="form-control" value="${(a.description || '').replace(/"/g, '&quot;')}">
+          <div class="form-text">Internal note about what this control entry toggles.</div>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="e_hide" ${a.hide ? 'checked' : ''}>
+            <label class="form-check-label" for="e_hide">Permanently hidden — disables associated announcements regardless of windows</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Schedule Windows
+            <small class="text-muted">(optional — auto-activate/deactivate when hide is unchecked)</small>
+          </label>
+          <div id="e_windows">${hasWindows ? buildWindowsHtmlString(a.scheduleWindows) : ''}</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addWindowRow('e_windows')">&#43; Add Window</button>
+          <small class="text-muted d-block mt-1">If no windows: the hide checkbox controls activation. If windows are present: active only when hide is unchecked AND the current date is inside a window. Max 5.</small>
         </div>
       </div>`;
   }
@@ -908,6 +997,7 @@ async function saveEdit() {
     let seasonal = a.seasonalTiming;
     try { seasonal = JSON.parse(document.getElementById('e_seasonal').value); }
     catch (_) { showStatus('Invalid JSON in Seasonal timing — fix and try again.', 'danger'); return; }
+    const rwWindows = readWindowsFromContainer('e_windows');
     updated = {
       ...a,
       dayOfWeek: parseInt(document.getElementById('e_day').value, 10),
@@ -921,6 +1011,18 @@ async function saveEdit() {
       seasonalTiming: seasonal,
       isSpecial: document.getElementById('e_special').checked,
     };
+    if (rwWindows.length > 0) { updated.scheduleWindows = rwWindows; }
+    else { delete updated.scheduleWindows; }
+
+  } else if (type === 'control') {
+    const windows = readWindowsFromContainer('e_windows');
+    updated = {
+      ...a,
+      description: document.getElementById('e_desc').value.trim(),
+      hide:        document.getElementById('e_hide').checked,
+    };
+    if (windows.length > 0) { updated.scheduleWindows = windows; }
+    else { delete updated.scheduleWindows; }
   }
 
   showStatus('Saving to GitHub…', 'info');

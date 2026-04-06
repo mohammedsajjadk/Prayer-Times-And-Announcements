@@ -56,6 +56,11 @@
 
   <div id="statusArea"></div>
 
+  <!-- Local mode banner — visible on localhost when no token is set -->
+  <div id="localModeBanner" class="alert alert-info py-2 mb-3" style="display:none">
+    &#128187; <strong>Local Mode</strong> — No GitHub token set. Clicking <em>Save Locally</em> writes directly to disk.
+  </div>
+
   <!-- ── Section: Theme Selection ─────────────────────────────────────────── -->
   <div class="card mb-4">
     <div class="card-header"><strong>Theme Selection</strong></div>
@@ -116,29 +121,29 @@
         The two posters are displayed back-to-back within the display window.
       </p>
 
-      <h6 class="fw-semibold mb-2">Friday Dhuhr</h6>
-      <div class="row g-3 mb-4">
-        <div class="col-md-4">
-          <label class="form-label">Summer time (BST)
-            <small class="text-muted d-block">Adhkar shows at this time</small>
-          </label>
-          <input type="time" id="adhkar_fri_summer" class="form-control" value="14:10">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Winter time (GMT)
-            <small class="text-muted d-block">Adhkar shows at this time</small>
-          </label>
-          <input type="time" id="adhkar_fri_winter" class="form-control" value="13:42">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Display window
-            <small class="text-muted d-block">how long the poster shows</small>
-          </label>
-          <div class="input-group">
-            <input type="number" id="adhkar_fri_window" class="form-control" min="1" max="30" value="3">
-            <span class="input-group-text">min</span>
-          </div>
-        </div>
+      <h6 class="fw-semibold mb-2">Friday Dhuhr (Jumu'ah)</h6>
+      <p class="text-muted small mb-2">Adhkar shows at a fixed clock time on Fridays — not relative to a Jamaah entry. Poster 2 fills remaining time of the window.</p>
+      <div class="table-responsive mb-4">
+        <table class="table table-sm table-bordered align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Summer BST trigger</th>
+              <th>Winter GMT trigger</th>
+              <th>Window <small class="fw-normal text-muted">(min)</small></th>
+              <th>Poster 1 <small class="fw-normal text-muted">(sec)</small></th>
+              <th class="text-muted small fw-normal">Poster 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="time" id="adhkar_fri_summer" class="form-control form-control-sm" value="14:08"></td>
+              <td><input type="time" id="adhkar_fri_winter" class="form-control form-control-sm" value="13:42"></td>
+              <td><input type="number" id="adhkar_fri_window" class="form-control form-control-sm" min="1" max="30" value="3" oninput="updateP2Label('fri')"></td>
+              <td><input type="number" id="adhkar_fri_p1" class="form-control form-control-sm" min="5" max="300" value="120" oninput="updateP2Label('fri')"></td>
+              <td class="text-muted small" id="p2label_fri">auto</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <h6 class="fw-semibold mb-2">Per-Prayer Settings</h6>
@@ -184,6 +189,7 @@
 
   <div class="d-flex gap-2 mb-5">
     <button class="btn btn-success" onclick="saveSettings()">Save to GitHub</button>
+    <button class="btn btn-info text-white" id="localSaveBtn" onclick="saveLocally()" style="display:none">&#128190; Save Locally</button>
     <button class="btn btn-outline-secondary" onclick="loadSettings()">Reload from GitHub</button>
   </div>
 
@@ -195,6 +201,7 @@ const BRANCH        = 'main';
 const SETTINGS_PATH = '{{ mosque.settingsPath }}';
 const API_SET_URL   = '{{ mosque.apiBase }}api/settings';
 const API           = 'https://api.github.com';
+const IS_LOCAL      = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 // ─── Token ────────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('gh_token') || ''; }
@@ -211,6 +218,10 @@ function showTokenState() {
   const has = !!getToken();
   document.getElementById('tokenSetSection').style.display = has ? 'none' : '';
   document.getElementById('tokenSavedSection').style.display = has ? '' : 'none';
+  const banner = document.getElementById('localModeBanner');
+  if (banner) banner.style.display = (IS_LOCAL && !has) ? '' : 'none';
+  const btn = document.getElementById('localSaveBtn');
+  if (btn) btn.style.display = IS_LOCAL ? '' : 'none';
 }
 
 // ─── GitHub helpers ───────────────────────────────────────────────────────────
@@ -296,6 +307,8 @@ function populateForm(s) {
   document.getElementById('adhkar_fri_summer').value = a.fridayZohrSummer        || '14:10';
   document.getElementById('adhkar_fri_winter').value = a.fridayZohrWinter        || '13:42';
   document.getElementById('adhkar_fri_window').value = a.fridayZohrWindowMinutes ?? 3;
+  document.getElementById('adhkar_fri_p1').value     = a.fridayZohrPoster1Seconds ?? 120;
+  updateP2Label('fri');
 
   // Adhkar — per-prayer
   const prayers = (a.prayers) || {};
@@ -329,14 +342,24 @@ function getRefreshTimes() {
 }
 
 // ─── Save ─────────────────────────────────────────────────────────────────────
-async function saveSettings() {
+
+// Validates the form and builds the settings object.
+// Returns the settings object, or null if validation failed (status already shown).
+function _validateAndBuildSettings() {
+  // Validate Friday Dhuhr poster timing
+  const friP1  = parseInt(document.getElementById('adhkar_fri_p1').value, 10) || 120;
+  const friWin = parseInt(document.getElementById('adhkar_fri_window').value, 10) || 3;
+  if (friP1 >= friWin * 60) {
+    showStatus(`Friday Dhuhr: Poster 1 (${friP1}s) must be less than the total window (${friWin * 60}s).`, 'warning');
+    return null;
+  }
   // Validate all per-prayer rows
   for (const p of ['fajr', 'zohr', 'asr', 'magrib', 'isha']) {
     const p1  = parseInt(document.getElementById(`adhkar_p1_${p}`).value, 10) || 90;
     const win = parseInt(document.getElementById(`adhkar_window_${p}`).value, 10) || 3;
     if (p1 >= win * 60) {
       showStatus(`${PRAYER_NAMES[p]}: Poster 1 (${p1}s) must be less than the total window (${win * 60}s).`, 'warning');
-      return;
+      return null;
     }
   }
 
@@ -346,7 +369,7 @@ async function saveSettings() {
     poster1Seconds:       parseInt(document.getElementById(`adhkar_p1_${p}`).value, 10)     || 90,
   });
 
-  const settings = {
+  return {
     jumuah: {
       summer: document.getElementById('jumuah_summer').value || '13:45',
       winter: document.getElementById('jumuah_winter').value || '13:20',
@@ -358,9 +381,10 @@ async function saveSettings() {
     },
     scheduledRefreshTimes: getRefreshTimes(),
     adhkar: {
-      fridayZohrSummer:        document.getElementById('adhkar_fri_summer').value || '14:10',
-      fridayZohrWinter:        document.getElementById('adhkar_fri_winter').value || '13:42',
-      fridayZohrWindowMinutes: parseInt(document.getElementById('adhkar_fri_window').value, 10) || 3,
+      fridayZohrSummer:         document.getElementById('adhkar_fri_summer').value || '14:10',
+      fridayZohrWinter:         document.getElementById('adhkar_fri_winter').value || '13:42',
+      fridayZohrWindowMinutes:  parseInt(document.getElementById('adhkar_fri_window').value, 10) || 3,
+      fridayZohrPoster1Seconds: friP1,
       prayers: {
         fajr:   buildPrayerCfg('fajr'),
         zohr:   buildPrayerCfg('zohr'),
@@ -370,6 +394,11 @@ async function saveSettings() {
       },
     },
   };
+}
+
+async function saveSettings() {
+  const settings = _validateAndBuildSettings();
+  if (!settings) return;
 
   showStatus('Saving to GitHub…', 'info');
   try {
@@ -378,6 +407,27 @@ async function saveSettings() {
     const data = await resp.json();
     if (data.content && data.content.sha) _sha = data.content.sha;
     showStatus('&#10003; Settings saved to GitHub.', 'success');
+  } catch (e) {
+    showStatus(e.message, 'danger');
+  }
+}
+
+async function saveLocally() {
+  const settings = _validateAndBuildSettings();
+  if (!settings) return;
+
+  showStatus('Saving to local disk…', 'info');
+  try {
+    const resp = await fetch(API_SET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error('Local save failed: ' + (e.error || resp.status));
+    }
+    showStatus('&#10003; Settings saved to local disk.', 'success');
   } catch (e) {
     showStatus(e.message, 'danger');
   }
@@ -447,8 +497,11 @@ function buildAdhkarPrayerTable() {
 }
 
 function updateP2Label(p) {
-  const p1  = parseInt(document.getElementById(`adhkar_p1_${p}`).value, 10) || 0;
-  const win = (parseInt(document.getElementById(`adhkar_window_${p}`).value, 10) || 3) * 60;
+  const p1El  = document.getElementById(p === 'fri' ? 'adhkar_fri_p1'    : `adhkar_p1_${p}`);
+  const winEl = document.getElementById(p === 'fri' ? 'adhkar_fri_window' : `adhkar_window_${p}`);
+  if (!p1El || !winEl) return;
+  const p1  = parseInt(p1El.value, 10) || 0;
+  const win = (parseInt(winEl.value, 10) || 3) * 60;
   const p2  = win - p1;
   const el  = document.getElementById(`p2label_${p}`);
   if (!el) return;

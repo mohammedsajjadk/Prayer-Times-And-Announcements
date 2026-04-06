@@ -3,7 +3,7 @@
     "summer": "13:30",
     "winter": "13:15"
   },
-  "selectedTheme": "theme2",
+  "selectedTheme": "theme1",
   "labels": {
     "column1": "ADHAN",
     "column2": "IQAMAH"
@@ -58,6 +58,7 @@
     "fridayZohrSummer": "13:40",
     "fridayZohrWinter": "13:25",
     "fridayZohrWindowMinutes": 3,
+    "fridayZohrPoster1Seconds": 120,
     "prayers": {
       "fajr": {
         "delayAfterJamaah": 8,

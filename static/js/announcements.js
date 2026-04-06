@@ -75,7 +75,21 @@ var announcementModule = {
       return announcement.id === controlId && announcement.type === "control";
     });
     
-    return controlEntry ? (controlEntry.hide === true) : false;
+    if (!controlEntry) return false;
+
+    // hide: true always wins — permanently hidden regardless of windows
+    if (controlEntry.hide === true) return true;
+
+    // hide: false + schedule windows → active only when currently inside a window
+    if (controlEntry.scheduleWindows && controlEntry.scheduleWindows.length > 0) {
+      var nowMs = new Date().getTime();
+      var inWindow = controlEntry.scheduleWindows.some(function(w) {
+        return nowMs >= new Date(w.start).getTime() && nowMs <= new Date(w.end).getTime();
+      });
+      return !inWindow;
+    }
+
+    return false;
   },
 
   init: function () {
@@ -218,6 +232,15 @@ var announcementModule = {
     // Check if announcement is hidden
     if (announcement.hide === true) {
       return false;
+    }
+
+    // Check optional date-range schedule windows — if present, must be inside one
+    if (announcement.scheduleWindows && announcement.scheduleWindows.length > 0) {
+      var nowMs = now.getTime();
+      var inWindow = announcement.scheduleWindows.some(function(w) {
+        return nowMs >= new Date(w.start).getTime() && nowMs <= new Date(w.end).getTime();
+      });
+      if (!inWindow) return false;
     }
 
     // Check day of week
@@ -455,9 +478,16 @@ var announcementModule = {
       console.log("DEBUG: Adhkar poster should display - superseding all other announcements");
       // Build schedule from per-prayer settings so durations reflect mosque configuration
       var _adhkarCfg = (window.appSettings || DEFAULT_SETTINGS).adhkar;
-      var _prayerCfg = (_adhkarCfg.prayers || {})[adhkarPosterCheck.matchedPrayer] || {};
-      var _p1secs  = _prayerCfg.poster1Seconds        !== undefined ? _prayerCfg.poster1Seconds        : (_adhkarCfg.poster1Seconds        || 90);
-      var _winMins = _prayerCfg.displayWindowMinutes   !== undefined ? _prayerCfg.displayWindowMinutes  : (_adhkarCfg.displayWindowMinutes  || 3);
+      var _p1secs, _winMins;
+      if (adhkarPosterCheck.isFridayZohr) {
+        // Friday Jumu'ah has its own independent poster1 setting
+        _p1secs  = _adhkarCfg.fridayZohrPoster1Seconds !== undefined ? _adhkarCfg.fridayZohrPoster1Seconds : 90;
+        _winMins = _adhkarCfg.fridayZohrWindowMinutes  || 3;
+      } else {
+        var _prayerCfg = (_adhkarCfg.prayers || {})[adhkarPosterCheck.matchedPrayer] || {};
+        _p1secs  = _prayerCfg.poster1Seconds        !== undefined ? _prayerCfg.poster1Seconds        : (_adhkarCfg.poster1Seconds        || 90);
+        _winMins = _prayerCfg.displayWindowMinutes   !== undefined ? _prayerCfg.displayWindowMinutes  : (_adhkarCfg.displayWindowMinutes  || 3);
+      }
       var _winsecs = _winMins * 60;
       var _p2secs  = Math.max(1, _winsecs - _p1secs);
       // Display Adhkar poster ONLY - skip all other announcements during this time
@@ -1468,6 +1498,7 @@ var announcementModule = {
         result.shouldDisplay = true;
         result.adhkarStartSeconds = fridayZohrTime * 60;
         result.matchedPrayer = 'zohr';
+        result.isFridayZohr = true;
         return result;
       }
     }

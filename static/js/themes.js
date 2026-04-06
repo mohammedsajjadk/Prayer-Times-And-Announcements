@@ -254,17 +254,19 @@ var themeModule = {
     this._applyFromSettings(0);
   },
 
-  // Poll for appSettings availability (up to ~500 ms) then apply
+  // Poll for appSettings availability (up to ~1000 ms) then apply
   _applyFromSettings: function(attempts) {
     var self = this;
-    var settings = window.appSettings || window._DEFAULT_SETTINGS_FALLBACK;
-    if (settings && settings.selectedTheme) {
-      self.applyThemeByName(settings.selectedTheme);
-    } else if (attempts < 10) {
+    if (window.appSettings && window.appSettings.selectedTheme) {
+      // Real settings have loaded — use them
+      self.applyThemeByName(window.appSettings.selectedTheme);
+    } else if (attempts < 20) {
+      // Keep polling every 50 ms (max 20 × 50 ms = 1 s)
       setTimeout(function() { self._applyFromSettings(attempts + 1); }, 50);
     } else {
-      // Fallback to theme1 after ~500 ms if settings never loaded
-      self.applyThemeByName('theme1');
+      // Settings never loaded — use the default fallback
+      var fallbackTheme = (window._DEFAULT_SETTINGS_FALLBACK || {}).selectedTheme || 'theme1';
+      self.applyThemeByName(fallbackTheme);
     }
   },
 

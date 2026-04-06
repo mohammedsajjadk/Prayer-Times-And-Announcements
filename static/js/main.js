@@ -16,6 +16,7 @@ var DEFAULT_SETTINGS = {
     fridayZohrSummer: '14:10',
     fridayZohrWinter: '13:42',
     fridayZohrWindowMinutes: 3,
+    fridayZohrPoster1Seconds: 90,
     prayers: {
       fajr:   { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 },
       zohr:   { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 },

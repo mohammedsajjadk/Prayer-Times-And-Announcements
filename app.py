@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime, timezone, timedelta
 
-from flask import Flask, render_template, jsonify, Response
+from flask import Flask, render_template, jsonify, Response, request
 from hijri_converter import convert
 
 app = Flask(__name__)
@@ -155,6 +155,20 @@ def _api_json_view(mosque_slug, file_key, empty_fallback='{}'):
         return Response(empty_fallback, mimetype='application/json', status=404)
 
 
+def _api_json_write_view(mosque_slug, file_key):
+    """Write a JSON file to disk. Only permitted from localhost."""
+    if request.remote_addr not in ('127.0.0.1', '::1'):
+        return jsonify({'error': 'Local writes are only permitted from localhost.'}), 403
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'error': 'Invalid or missing JSON body.'}), 400
+    mosque = MOSQUE_CONFIGS[mosque_slug]
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), mosque[file_key])
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    return jsonify({'ok': True})
+
+
 # ─── Tralee routes ────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
@@ -186,9 +200,19 @@ def get_announcements():
     return _api_json_view('tralee', 'announcementsPath', '[]')
 
 
+@app.route('/api/announcements', methods=['POST'])
+def save_announcements_local():
+    return _api_json_write_view('tralee', 'announcementsPath')
+
+
 @app.route('/api/settings')
 def get_settings():
     return _api_json_view('tralee', 'settingsPath', '{}')
+
+
+@app.route('/api/settings', methods=['POST'])
+def save_settings_local():
+    return _api_json_write_view('tralee', 'settingsPath')
 
 
 # ─── Dublin routes ────────────────────────────────────────────────────────────
@@ -222,9 +246,19 @@ def dublin_get_announcements():
     return _api_json_view('dublin', 'announcementsPath', '[]')
 
 
+@app.route('/dublin/api/announcements', methods=['POST'])
+def dublin_save_announcements_local():
+    return _api_json_write_view('dublin', 'announcementsPath')
+
+
 @app.route('/dublin/api/settings')
 def dublin_get_settings():
     return _api_json_view('dublin', 'settingsPath', '{}')
+
+
+@app.route('/dublin/api/settings', methods=['POST'])
+def dublin_save_settings_local():
+    return _api_json_write_view('dublin', 'settingsPath')
 
 
 if __name__ == '__main__':
