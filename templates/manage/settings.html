@@ -13,6 +13,11 @@
     .navbar-brand { font-weight: 700; }
     .refresh-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .refresh-row input[type=time] { max-width: 130px; }
+    .theme-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .theme-swatch { width: 52px; height: 44px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; display: flex; align-items: center; justify-content: center; transition: border-color .15s, box-shadow .15s; }
+    .theme-swatch:hover { opacity: .85; }
+    .theme-swatch.selected { border-color: #212529; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #212529; }
+    .theme-swatch .swatch-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); }
   </style>
 </head>
 <body>
@@ -50,6 +55,17 @@
   </div>
 
   <div id="statusArea"></div>
+
+  <!-- ── Section: Theme Selection ─────────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>Theme Selection</strong></div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">Select the colour theme shown on the live prayer display.</p>
+      <input type="hidden" id="sel_theme" value="theme1">
+      <div class="theme-grid" id="themeGrid"><!-- built by JS --></div>
+      <div class="mt-2 small text-muted">Selected: <strong id="selThemeName">Dark Navy</strong></div>
+    </div>
+  </div>
 
   <!-- ── Section 0: Jumuah Times ─────────────────────────────────────────── -->
   <div class="card mb-4">
@@ -99,54 +115,68 @@
         After each Jamaah prayer the Adhkar poster is shown automatically.
         The two posters are displayed back-to-back within the display window.
       </p>
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">
-            Delay after Jamaah
-            <small class="text-muted d-block">minutes before poster appears</small>
-          </label>
-          <div class="input-group">
-            <input type="number" id="adhkar_delay" class="form-control" min="0" max="60" value="8">
-            <span class="input-group-text">min</span>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">
-            Total display window
-            <small class="text-muted d-block">how long both posters show</small>
-          </label>
-          <div class="input-group">
-            <input type="number" id="adhkar_window" class="form-control" min="1" max="30" value="3"
-                   oninput="updatePoster2Label()">
-            <span class="input-group-text">min</span>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">
-            Poster 1 shown for
-            <small class="text-muted d-block">rest goes to Poster 2</small>
-          </label>
-          <div class="input-group">
-            <input type="number" id="adhkar_p1" class="form-control" min="5" max="300" value="90"
-                   oninput="updatePoster2Label()">
-            <span class="input-group-text">sec</span>
-          </div>
-          <div class="form-text" id="p2Label">Poster 2: 90 sec</div>
-        </div>
 
+      <h6 class="fw-semibold mb-2">Friday Dhuhr</h6>
+      <div class="row g-3 mb-4">
         <div class="col-md-4">
-          <label class="form-label">
-            Friday Dhuhr — Summer time
-            <small class="text-muted d-block">Irish Summer Time (BST+1)</small>
+          <label class="form-label">Summer time (BST)
+            <small class="text-muted d-block">Adhkar shows at this time</small>
           </label>
           <input type="time" id="adhkar_fri_summer" class="form-control" value="14:10">
         </div>
         <div class="col-md-4">
-          <label class="form-label">
-            Friday Dhuhr — Winter time
-            <small class="text-muted d-block">Irish Standard Time (GMT)</small>
+          <label class="form-label">Winter time (GMT)
+            <small class="text-muted d-block">Adhkar shows at this time</small>
           </label>
           <input type="time" id="adhkar_fri_winter" class="form-control" value="13:42">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Display window
+            <small class="text-muted d-block">how long the poster shows</small>
+          </label>
+          <div class="input-group">
+            <input type="number" id="adhkar_fri_window" class="form-control" min="1" max="30" value="3">
+            <span class="input-group-text">min</span>
+          </div>
+        </div>
+      </div>
+
+      <h6 class="fw-semibold mb-2">Per-Prayer Settings</h6>
+      <p class="text-muted small mb-2">Poster 1 runs first; Poster 2 fills the remaining time of the window.</p>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Prayer</th>
+              <th>Delay after Jamaah <small class="text-muted fw-normal">(min)</small></th>
+              <th>Display window <small class="text-muted fw-normal">(min)</small></th>
+              <th>Poster 1 <small class="text-muted fw-normal">(sec)</small></th>
+              <th class="text-muted small fw-normal">Poster 2</th>
+            </tr>
+          </thead>
+          <tbody id="adhkarPrayerTable"><!-- rows built by JS --></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section: Display Labels ─────────────────────────────────────────── -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>Display Labels</strong></div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">Text shown as column headings on the live prayer display.</p>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Column 1
+            <small class="text-muted d-block">e.g. BEGINNING or AZAN</small>
+          </label>
+          <input type="text" id="label_col1" class="form-control text-uppercase" value="BEGINNING" maxlength="20">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Column 2
+            <small class="text-muted d-block">e.g. JAMA'AH or IQAMAH</small>
+          </label>
+          <input type="text" id="label_col2" class="form-control text-uppercase" value="JAMA'AH" maxlength="20">
         </div>
       </div>
     </div>
@@ -243,24 +273,39 @@ async function loadSettings() {
 }
 
 function populateForm(s) {
-  // Jumuah times
+  // Jumuah
   const j = s.jumuah || {};
   document.getElementById('jumuah_summer').value = j.summer || '13:45';
   document.getElementById('jumuah_winter').value = j.winter || '13:20';
+
+  // Theme
+  selectThemeSwatch(s.selectedTheme || 'theme1');
+
+  // Labels
+  const lbl = s.labels || {};
+  document.getElementById('label_col1').value = lbl.column1 || 'BEGINNING';
+  document.getElementById('label_col2').value = lbl.column2 || "JAMA'AH";
 
   // Refresh times
   const list = document.getElementById('refreshList');
   list.innerHTML = '';
   (s.scheduledRefreshTimes || []).forEach(t => addRefreshRow(t));
 
-  // Adhkar
+  // Adhkar — Friday
   const a = s.adhkar || {};
-  document.getElementById('adhkar_delay').value      = a.delayAfterJamaah      ?? 8;
-  document.getElementById('adhkar_window').value     = a.displayWindowMinutes  ?? 3;
-  document.getElementById('adhkar_p1').value         = a.poster1Seconds        ?? 90;
-  document.getElementById('adhkar_fri_summer').value = a.fridayZohrSummer      || '14:10';
-  document.getElementById('adhkar_fri_winter').value = a.fridayZohrWinter      || '13:42';
-  updatePoster2Label();
+  document.getElementById('adhkar_fri_summer').value = a.fridayZohrSummer        || '14:10';
+  document.getElementById('adhkar_fri_winter').value = a.fridayZohrWinter        || '13:42';
+  document.getElementById('adhkar_fri_window').value = a.fridayZohrWindowMinutes ?? 3;
+
+  // Adhkar — per-prayer
+  const prayers = (a.prayers) || {};
+  ['fajr', 'zohr', 'asr', 'magrib', 'isha'].forEach(p => {
+    const pc = prayers[p] || {};
+    document.getElementById(`adhkar_delay_${p}`).value  = pc.delayAfterJamaah     ?? 8;
+    document.getElementById(`adhkar_window_${p}`).value = pc.displayWindowMinutes ?? 3;
+    document.getElementById(`adhkar_p1_${p}`).value     = pc.poster1Seconds       ?? 90;
+    updateP2Label(p);
+  });
 }
 
 // ─── Refresh row helpers ──────────────────────────────────────────────────────
@@ -285,25 +330,44 @@ function getRefreshTimes() {
 
 // ─── Save ─────────────────────────────────────────────────────────────────────
 async function saveSettings() {
-  const p1  = parseInt(document.getElementById('adhkar_p1').value, 10) || 90;
-  const win = parseInt(document.getElementById('adhkar_window').value, 10) || 3;
-  if (p1 >= win * 60) {
-    showStatus(`Poster 1 seconds (${p1}s) must be less than the total window (${win * 60}s).`, 'warning');
-    return;
+  // Validate all per-prayer rows
+  for (const p of ['fajr', 'zohr', 'asr', 'magrib', 'isha']) {
+    const p1  = parseInt(document.getElementById(`adhkar_p1_${p}`).value, 10) || 90;
+    const win = parseInt(document.getElementById(`adhkar_window_${p}`).value, 10) || 3;
+    if (p1 >= win * 60) {
+      showStatus(`${PRAYER_NAMES[p]}: Poster 1 (${p1}s) must be less than the total window (${win * 60}s).`, 'warning');
+      return;
+    }
   }
+
+  const buildPrayerCfg = p => ({
+    delayAfterJamaah:     parseInt(document.getElementById(`adhkar_delay_${p}`).value, 10)  || 8,
+    displayWindowMinutes: parseInt(document.getElementById(`adhkar_window_${p}`).value, 10) || 3,
+    poster1Seconds:       parseInt(document.getElementById(`adhkar_p1_${p}`).value, 10)     || 90,
+  });
 
   const settings = {
     jumuah: {
       summer: document.getElementById('jumuah_summer').value || '13:45',
       winter: document.getElementById('jumuah_winter').value || '13:20',
     },
+    selectedTheme: document.getElementById('sel_theme').value || 'theme1',
+    labels: {
+      column1: document.getElementById('label_col1').value.trim() || 'BEGINNING',
+      column2: document.getElementById('label_col2').value.trim() || "JAMA'AH",
+    },
     scheduledRefreshTimes: getRefreshTimes(),
     adhkar: {
-      delayAfterJamaah:     parseInt(document.getElementById('adhkar_delay').value, 10) || 8,
-      displayWindowMinutes: win,
-      poster1Seconds:       p1,
-      fridayZohrSummer:     document.getElementById('adhkar_fri_summer').value || '14:10',
-      fridayZohrWinter:     document.getElementById('adhkar_fri_winter').value || '13:42',
+      fridayZohrSummer:        document.getElementById('adhkar_fri_summer').value || '14:10',
+      fridayZohrWinter:        document.getElementById('adhkar_fri_winter').value || '13:42',
+      fridayZohrWindowMinutes: parseInt(document.getElementById('adhkar_fri_window').value, 10) || 3,
+      prayers: {
+        fajr:   buildPrayerCfg('fajr'),
+        zohr:   buildPrayerCfg('zohr'),
+        asr:    buildPrayerCfg('asr'),
+        magrib: buildPrayerCfg('magrib'),
+        isha:   buildPrayerCfg('isha'),
+      },
     },
   };
 
@@ -319,17 +383,80 @@ async function saveSettings() {
   }
 }
 
-// ─── UI helpers ───────────────────────────────────────────────────────────────
-function updatePoster2Label() {
-  const p1  = parseInt(document.getElementById('adhkar_p1').value, 10) || 0;
-  const win = (parseInt(document.getElementById('adhkar_window').value, 10) || 3) * 60;
-  const p2  = win - p1;
-  document.getElementById('p2Label').textContent =
-    p2 > 0 ? `Poster 2: ${p2} sec` : 'Poster 1 exceeds total window!';
-  document.getElementById('p2Label').className =
-    p2 > 0 ? 'form-text' : 'form-text text-danger';
+// ─── Theme swatches ───────────────────────────────────────────────────────────
+const PRAYER_NAMES = { fajr: 'Fajr', zohr: 'Dhuhr', asr: 'Asr', magrib: 'Maghrib', isha: 'Isha' };
+
+const THEMES_META = [
+  { key: 'theme1',  name: 'Dark Navy',      bg: '#001529', hl: '#00F0FF' },
+  { key: 'theme2',  name: 'Clean White',    bg: '#FFFFFF', hl: '#0055CC' },
+  { key: 'theme3',  name: 'Navy Teal',      bg: '#0A192F', hl: '#64FFDA' },
+  { key: 'theme4',  name: 'White Cyan',     bg: '#FFFFFF', hl: '#00C0CC' },
+  { key: 'theme5',  name: 'White Teal',     bg: '#FFFFFF', hl: '#13686e' },
+  { key: 'theme6',  name: 'Classic Blue',   bg: '#0099ff', hl: '#000000' },
+  { key: 'theme7',  name: 'Midnight Gold',  bg: '#0D0D0D', hl: '#FFD700' },
+  { key: 'theme8',  name: 'Deep Purple',    bg: '#1A0033', hl: '#DA70D6' },
+  { key: 'theme9',  name: 'Forest Green',   bg: '#0D1F0D', hl: '#39FF14' },
+  { key: 'theme10', name: 'Maroon Amber',   bg: '#1C0000', hl: '#FFBF00' },
+  { key: 'theme11', name: 'Slate Orange',   bg: '#2F3542', hl: '#FF6B35' },
+  { key: 'theme12', name: 'Dark Teal',      bg: '#003333', hl: '#00FFCC' },
+  { key: 'theme13', name: 'Midnight Blue',  bg: '#00008B', hl: '#87CEEB' },
+  { key: 'theme14', name: 'Warm Dark',      bg: '#1A1209', hl: '#FFA500' },
+  { key: 'theme15', name: 'Dark Indigo',    bg: '#1A1A2E', hl: '#E94560' },
+  { key: 'theme16', name: 'Desert Sand',    bg: '#2C1810', hl: '#FF8C00' },
+  { key: 'theme17', name: 'High Contrast',  bg: '#000000', hl: '#FFFF00' },
+  { key: 'theme18', name: 'Blue Grey',      bg: '#37474F', hl: '#80CBC4' },
+  { key: 'theme19', name: 'Charcoal Green', bg: '#1C1C1C', hl: '#00FF7F' },
+  { key: 'theme20', name: 'Crimson Dark',   bg: '#14000A', hl: '#FF1493' },
+];
+
+function buildThemeSwatches() {
+  const grid = document.getElementById('themeGrid');
+  grid.innerHTML = THEMES_META.map(m => `
+    <div class="theme-swatch" id="swatch-${m.key}" data-theme="${m.key}"
+         style="background:${m.bg}" title="${m.name}"
+         onclick="selectThemeSwatch('${m.key}')">
+      <div class="swatch-dot" style="background:${m.hl}"></div>
+    </div>`).join('');
 }
 
+function selectThemeSwatch(themeName) {
+  document.querySelectorAll('.theme-swatch').forEach(el => el.classList.remove('selected'));
+  const target = document.getElementById('swatch-' + themeName);
+  if (target) target.classList.add('selected');
+  document.getElementById('sel_theme').value = themeName;
+  const meta = THEMES_META.find(m => m.key === themeName);
+  document.getElementById('selThemeName').textContent = meta ? meta.name : themeName;
+}
+
+// ─── Adhkar per-prayer table ──────────────────────────────────────────────────
+function buildAdhkarPrayerTable() {
+  const tbody = document.getElementById('adhkarPrayerTable');
+  tbody.innerHTML = ['fajr', 'zohr', 'asr', 'magrib', 'isha'].map(p => `
+    <tr>
+      <td><strong>${PRAYER_NAMES[p]}</strong></td>
+      <td><input type="number" id="adhkar_delay_${p}" class="form-control form-control-sm"
+            min="0" max="60" value="8" style="max-width:80px"></td>
+      <td><input type="number" id="adhkar_window_${p}" class="form-control form-control-sm"
+            min="1" max="30" value="3" style="max-width:80px"
+            oninput="updateP2Label('${p}')"></td>
+      <td><input type="number" id="adhkar_p1_${p}" class="form-control form-control-sm"
+            min="5" max="300" value="90" style="max-width:100px"
+            oninput="updateP2Label('${p}')"></td>
+      <td class="text-muted small" id="p2label_${p}">90 sec</td>
+    </tr>`).join('');
+}
+
+function updateP2Label(p) {
+  const p1  = parseInt(document.getElementById(`adhkar_p1_${p}`).value, 10) || 0;
+  const win = (parseInt(document.getElementById(`adhkar_window_${p}`).value, 10) || 3) * 60;
+  const p2  = win - p1;
+  const el  = document.getElementById(`p2label_${p}`);
+  if (!el) return;
+  if (p2 > 0) { el.textContent = p2 + ' sec'; el.className = 'text-muted small'; }
+  else { el.textContent = '\u26a0 P1 too long'; el.className = 'text-danger small fw-semibold'; }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
 function showStatus(msg, type) {
   document.getElementById('statusArea').innerHTML = `
     <div class="alert alert-${type} alert-dismissible fade show">
@@ -339,6 +466,8 @@ function showStatus(msg, type) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+buildThemeSwatches();
+buildAdhkarPrayerTable();
 showTokenState();
 loadSettings();
 </script>

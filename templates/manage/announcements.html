@@ -17,6 +17,7 @@
     .ann-card.type-image { border-left-color: #fd7e14; }
     .ann-card.is-hidden { background: #e9ecef !important; border-left-color: #aaa !important; }
     .img-preview { max-height: 80px; border-radius: 4px; }
+    .window-row { border-left: 3px solid #dee2e6; padding-left: 8px; }
   </style>
 </head>
 <body>
@@ -81,21 +82,28 @@
           <label class="form-label">Message</label>
           <textarea id="txt_msg" class="form-control" rows="2"></textarea>
         </div>
-        <div class="col-md-3">
-          <label class="form-label">Start date</label>
-          <input type="date" id="txt_start_date" class="form-control">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Start time</label>
-          <input type="time" id="txt_start_time" class="form-control" value="09:00">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">End date</label>
-          <input type="date" id="txt_end_date" class="form-control">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">End time</label>
-          <input type="time" id="txt_end_time" class="form-control" value="23:59">
+        <div class="col-12">
+          <label class="form-label">Schedule Windows
+            <small class="text-muted">(announcement is active during any of these periods)</small>
+          </label>
+          <div id="txt_windows">
+            <div class="window-row row g-2 align-items-end mb-2">
+              <div class="col-md-3"><label class="form-label form-label-sm">Start date</label>
+                <input type="date" class="form-control form-control-sm win-start-date"></div>
+              <div class="col-md-2"><label class="form-label form-label-sm">Start time</label>
+                <input type="time" class="form-control form-control-sm win-start-time" value="09:00"></div>
+              <div class="col-auto d-flex align-items-end pb-1"><span class="text-muted small px-1">&rarr;</span></div>
+              <div class="col-md-3"><label class="form-label form-label-sm">End date</label>
+                <input type="date" class="form-control form-control-sm win-end-date"></div>
+              <div class="col-md-2"><label class="form-label form-label-sm">End time</label>
+                <input type="time" class="form-control form-control-sm win-end-time" value="23:59"></div>
+              <div class="col-auto d-flex align-items-end pb-1">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWindowRow(this)">&#10005;</button></div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addWindowRow('txt_windows')">&#43; Add Window</button>
+          <small class="text-muted d-block mt-1">Max 5 windows.</small>
         </div>
         <div class="col-12">
           <div class="form-check">
@@ -125,21 +133,28 @@
           <input type="file" id="img_file" class="form-control" accept="image/*" onchange="previewImage()">
           <img id="img_preview" class="img-preview mt-2" style="display:none">
         </div>
-        <div class="col-md-3">
-          <label class="form-label">Start date</label>
-          <input type="date" id="img_start_date" class="form-control">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Start time</label>
-          <input type="time" id="img_start_time" class="form-control" value="09:00">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">End date</label>
-          <input type="date" id="img_end_date" class="form-control">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">End time</label>
-          <input type="time" id="img_end_time" class="form-control" value="23:59">
+        <div class="col-12">
+          <label class="form-label">Schedule Windows
+            <small class="text-muted">(announcement is active during any of these periods)</small>
+          </label>
+          <div id="img_windows">
+            <div class="window-row row g-2 align-items-end mb-2">
+              <div class="col-md-3"><label class="form-label form-label-sm">Start date</label>
+                <input type="date" class="form-control form-control-sm win-start-date"></div>
+              <div class="col-md-2"><label class="form-label form-label-sm">Start time</label>
+                <input type="time" class="form-control form-control-sm win-start-time" value="09:00"></div>
+              <div class="col-auto d-flex align-items-end pb-1"><span class="text-muted small px-1">&rarr;</span></div>
+              <div class="col-md-3"><label class="form-label form-label-sm">End date</label>
+                <input type="date" class="form-control form-control-sm win-end-date"></div>
+              <div class="col-md-2"><label class="form-label form-label-sm">End time</label>
+                <input type="time" class="form-control form-control-sm win-end-time" value="23:59"></div>
+              <div class="col-auto d-flex align-items-end pb-1">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWindowRow(this)">&#10005;</button></div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addWindowRow('img_windows')">&#43; Add Window</button>
+          <small class="text-muted d-block mt-1">Max 5 windows.</small>
         </div>
         <div class="col-md-3">
           <label class="form-label">Frequency <small class="text-muted">(minutes)</small></label>
@@ -407,15 +422,41 @@ function renderList(items) {
         `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
       ).join('');
       const dc = fmtDC(a.displayCondition);
+      let dateInfo;
+      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
+        const now    = Date.now();
+        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
+        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
+        const badge  = active ? '<span class="badge text-bg-success me-1">Active</span>'
+                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming</span>'
+                              : '<span class="badge bg-light text-dark border me-1">Expired</span>';
+        dateInfo = badge + a.scheduleWindows.length + ' window' + (a.scheduleWindows.length > 1 ? 's' : '') +
+                   (next ? ' · ' + fmtIso(next.start) + ' → ' + fmtIso(next.end) : active ? ' · Active now' : '');
+      } else {
+        dateInfo = fmtIso(a.startDate) + ' → ' + fmtIso(a.endDate);
+      }
       detail = `
-        <div>${fmtIso(a.startDate)} → ${fmtIso(a.endDate)} ${dc}</div>
+        <div>${dateInfo} ${dc}</div>
         ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
 
     } else {
       // text
       const specBadge = a.isSpecial ? '<span class="badge text-bg-danger me-1">Special</span>' : '';
+      let dateInfo;
+      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
+        const now    = Date.now();
+        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
+        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
+        const badge  = active ? '<span class="badge text-bg-success me-1">Active</span>'
+                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming</span>'
+                              : '<span class="badge bg-light text-dark border me-1">Expired</span>';
+        dateInfo = badge + a.scheduleWindows.length + ' window' + (a.scheduleWindows.length > 1 ? 's' : '') +
+                   (next ? ' · ' + fmtIso(next.start) + ' → ' + fmtIso(next.end) : active ? ' · Active now' : '');
+      } else {
+        dateInfo = fmtIso(a.startDate) + ' → ' + fmtIso(a.endDate);
+      }
       detail = `
-        <div>${specBadge}${fmtIso(a.startDate)} → ${fmtIso(a.endDate)}</div>
+        <div>${specBadge}${dateInfo}</div>
         <div class="mt-1">${a.message || ''}</div>`;
     }
 
@@ -447,26 +488,18 @@ function renderList(items) {
 
 // ─── Add text ────────────────────────────────────────────────────────────────
 async function addText() {
-  const id       = document.getElementById('txt_id').value.trim();
-  const msg      = document.getElementById('txt_msg').value.trim();
-  const sd       = document.getElementById('txt_start_date').value;
-  const st       = document.getElementById('txt_start_time').value;
-  const ed       = document.getElementById('txt_end_date').value;
-  const et       = document.getElementById('txt_end_time').value;
-  const special  = document.getElementById('txt_special').checked;
+  const id      = document.getElementById('txt_id').value.trim();
+  const msg     = document.getElementById('txt_msg').value.trim();
+  const special = document.getElementById('txt_special').checked;
+  const windows = readWindowsFromContainer('txt_windows');
 
-  if (!id || !msg || !sd || !ed) { showStatus('Please fill in ID, message, and dates.', 'warning'); return; }
+  if (!id || !msg) { showStatus('Please fill in ID and message.', 'warning'); return; }
+  if (!windows.length) { showStatus('Please set at least one schedule window with start and end dates.', 'warning'); return; }
   if (window._annData.some(a => a.id === id)) {
     showStatus(`ID "${id}" already exists. Choose a different ID.`, 'danger'); return;
   }
 
-  const entry = {
-    id,
-    startDate: `${sd}T${st}:00+01:00`,
-    endDate:   `${ed}T${et}:00+01:00`,
-    message:   msg,
-    isSpecial: special,
-  };
+  const entry = { id, scheduleWindows: windows, message: msg, isSpecial: special };
 
   showStatus('Saving to GitHub…', 'info');
   try {
@@ -476,10 +509,9 @@ async function addText() {
     renderList(updated);
     showStatus(`&#10003; "${id}" added.`, 'success');
     togglePanel('addTextPanel');
-    // Clear fields
-    ['txt_id','txt_msg','txt_start_date','txt_start_time','txt_end_date','txt_end_time'].forEach(
-      f => document.getElementById(f).value = ''
-    );
+    document.getElementById('txt_id').value  = '';
+    document.getElementById('txt_msg').value = '';
+    document.getElementById('txt_windows').innerHTML = _winRowHtml('', '09:00', '', '23:59');
   } catch (e) { showStatus(e.message, 'danger'); }
 }
 
@@ -487,41 +519,32 @@ async function addText() {
 async function addImage() {
   const id      = document.getElementById('img_id').value.trim();
   const file    = document.getElementById('img_file').files[0];
-  const sd      = document.getElementById('img_start_date').value;
-  const st      = document.getElementById('img_start_time').value;
-  const ed      = document.getElementById('img_end_date').value;
-  const et      = document.getElementById('img_end_time').value;
   const freq    = parseInt(document.getElementById('img_freq').value, 10) || 1;
   const dur     = parseInt(document.getElementById('img_dur').value, 10) || 60;
   const special = document.getElementById('img_special').checked;
   const avoid   = document.getElementById('img_avoid').checked;
+  const windows = readWindowsFromContainer('img_windows');
 
-  if (!id || !file || !sd || !ed) {
-    showStatus('Please fill in ID, choose an image, and set dates.', 'warning'); return;
-  }
+  if (!id || !file) { showStatus('Please fill in ID and choose an image.', 'warning'); return; }
+  if (!windows.length) { showStatus('Please set at least one schedule window with start and end dates.', 'warning'); return; }
   if (window._annData.some(a => a.id === id)) {
     showStatus(`ID "${id}" already exists. Choose a different ID.`, 'danger'); return;
   }
 
   showStatus('Uploading image to GitHub…', 'info');
   let imagePath;
-  try {
-    imagePath = await uploadImage(file);
-  } catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
+  try { imagePath = await uploadImage(file); }
+  catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
 
   const entry = {
     id,
-    startDate: `${sd}T${st}:00+01:00`,
-    endDate:   `${ed}T${et}:00+01:00`,
+    scheduleWindows: windows,
     type: 'image',
     displayCondition: {
-      frequency: freq,
-      duration:  dur,
-      gapBetweenImages: 60,
-      avoidJamaahTime: avoid,
-      rotateImages: true,
+      frequency: freq, duration: dur, gapBetweenImages: 60,
+      avoidJamaahTime: avoid, rotateImages: true,
     },
-    images:    [imagePath],
+    images: [imagePath],
     isSpecial: special,
   };
 
@@ -533,9 +556,10 @@ async function addImage() {
     renderList(updated);
     showStatus(`&#10003; "${id}" added with image ${file.name}.`, 'success');
     togglePanel('addImagePanel');
-    document.getElementById('img_id').value = '';
+    document.getElementById('img_id').value  = '';
     document.getElementById('img_file').value = '';
     document.getElementById('img_preview').style.display = 'none';
+    document.getElementById('img_windows').innerHTML = _winRowHtml('', '09:00', '', '23:59');
   } catch (e) { showStatus(e.message, 'danger'); }
 }
 
@@ -567,6 +591,61 @@ async function toggleHide(idx) {
     renderList(updated);
     showStatus(`&#10003; "${ann.id}" is now ${action}.`, 'success');
   } catch (e) { showStatus(e.message, 'danger'); }
+}
+
+// ─── Schedule window helpers ───────────────────────────────────────────────────────────
+function _winRowHtml(sd, st, ed, et) {
+  return '<div class="window-row row g-2 align-items-end mb-2">' +
+    '<div class="col-md-3"><label class="form-label form-label-sm">Start date</label>' +
+    `<input type="date" class="form-control form-control-sm win-start-date" value="${sd}"></div>` +
+    '<div class="col-md-2"><label class="form-label form-label-sm">Start time</label>' +
+    `<input type="time" class="form-control form-control-sm win-start-time" value="${st}"></div>` +
+    '<div class="col-auto d-flex align-items-end pb-1"><span class="text-muted small px-1">&rarr;</span></div>' +
+    '<div class="col-md-3"><label class="form-label form-label-sm">End date</label>' +
+    `<input type="date" class="form-control form-control-sm win-end-date" value="${ed}"></div>` +
+    '<div class="col-md-2"><label class="form-label form-label-sm">End time</label>' +
+    `<input type="time" class="form-control form-control-sm win-end-time" value="${et}"></div>` +
+    '<div class="col-auto d-flex align-items-end pb-1">' +
+    '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWindowRow(this)">&#10005;</button></div>' +
+    '</div>';
+}
+
+function buildWindowsHtmlString(windows) {
+  return (windows || [{ start: '', end: '' }]).map(w => {
+    const sd = w.start ? w.start.substring(0, 10) : '';
+    const st = w.start && w.start.length > 10 ? w.start.substring(11, 16) : '09:00';
+    const ed = w.end   ? w.end.substring(0, 10) : '';
+    const et = w.end   && w.end.length > 10   ? w.end.substring(11, 16)   : '23:59';
+    return _winRowHtml(sd, st, ed, et);
+  }).join('');
+}
+
+function addWindowRow(containerId) {
+  const container = document.getElementById(containerId);
+  if (container.querySelectorAll('.window-row').length >= 5) {
+    alert('Maximum 5 schedule windows allowed.');
+    return;
+  }
+  container.insertAdjacentHTML('beforeend', _winRowHtml('', '09:00', '', '23:59'));
+}
+
+function removeWindowRow(btn) {
+  const row       = btn.closest('.window-row');
+  const container = row.parentElement;
+  if (container.querySelectorAll('.window-row').length <= 1) {
+    alert('At least one schedule window is required.');
+    return;
+  }
+  row.remove();
+}
+
+function readWindowsFromContainer(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('.window-row')).map(row => ({
+    start: `${row.querySelector('.win-start-date').value}T${row.querySelector('.win-start-time').value || '00:00'}:00+01:00`,
+    end:   `${row.querySelector('.win-end-date').value}T${row.querySelector('.win-end-time').value || '23:59'}:00+01:00`,
+  })).filter(w => w.start.substring(0, 10) && w.end.substring(0, 10));
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
@@ -639,8 +718,9 @@ function openEdit(idx) {
 
   if (type === 'text') {
     title = 'Edit Text Announcement';
-    const s = isoToInputs(a.startDate);
-    const e = isoToInputs(a.endDate);
+    const editWindows = a.scheduleWindows && a.scheduleWindows.length > 0
+      ? a.scheduleWindows
+      : (a.startDate ? [{ start: a.startDate, end: a.endDate || '' }] : [{ start: '', end: '' }]);
     body = `
       <div class="row g-3">
         <div class="col-12">
@@ -651,14 +731,15 @@ function openEdit(idx) {
           <label class="form-label">Message</label>
           <textarea id="e_msg" class="form-control" rows="3">${(a.message || '').replace(/</g,'&lt;')}</textarea>
         </div>
-        <div class="col-md-3"><label class="form-label">Start date</label>
-          <input type="date" id="e_sd" class="form-control" value="${s.date}"></div>
-        <div class="col-md-3"><label class="form-label">Start time</label>
-          <input type="time" id="e_st" class="form-control" value="${s.time}"></div>
-        <div class="col-md-3"><label class="form-label">End date</label>
-          <input type="date" id="e_ed" class="form-control" value="${e.date}"></div>
-        <div class="col-md-3"><label class="form-label">End time</label>
-          <input type="time" id="e_et" class="form-control" value="${e.time}"></div>
+        <div class="col-12">
+          <label class="form-label">Schedule Windows
+            <small class="text-muted">(announcement is active during any of these periods)</small>
+          </label>
+          <div id="e_windows">${buildWindowsHtmlString(editWindows)}</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addWindowRow('e_windows')">&#43; Add Window</button>
+          <small class="text-muted d-block mt-1">Max 5 windows.</small>
+        </div>
         <div class="col-12">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="e_special" ${a.isSpecial ? 'checked' : ''}>
@@ -669,10 +750,11 @@ function openEdit(idx) {
 
   } else if (type === 'image') {
     title = 'Edit Image Announcement';
-    const s   = isoToInputs(a.startDate);
-    const e   = isoToInputs(a.endDate);
     const dc  = a.displayCondition || {};
     const img = (a.images || [])[0] || '';
+    const editWindows = a.scheduleWindows && a.scheduleWindows.length > 0
+      ? a.scheduleWindows
+      : (a.startDate ? [{ start: a.startDate, end: a.endDate || '' }] : [{ start: '', end: '' }]);
     body = `
       <div class="row g-3">
         <div class="col-12">
@@ -688,14 +770,15 @@ function openEdit(idx) {
           <input type="file" id="e_file" class="form-control" accept="image/*" onchange="previewImage('e_file','e_preview')">
           <img id="e_preview" class="img-preview mt-2" style="display:none">
         </div>
-        <div class="col-md-3"><label class="form-label">Start date</label>
-          <input type="date" id="e_sd" class="form-control" value="${s.date}"></div>
-        <div class="col-md-3"><label class="form-label">Start time</label>
-          <input type="time" id="e_st" class="form-control" value="${s.time}"></div>
-        <div class="col-md-3"><label class="form-label">End date</label>
-          <input type="date" id="e_ed" class="form-control" value="${e.date}"></div>
-        <div class="col-md-3"><label class="form-label">End time</label>
-          <input type="time" id="e_et" class="form-control" value="${e.time}"></div>
+        <div class="col-12">
+          <label class="form-label">Schedule Windows
+            <small class="text-muted">(announcement is active during any of these periods)</small>
+          </label>
+          <div id="e_windows">${buildWindowsHtmlString(editWindows)}</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addWindowRow('e_windows')">&#43; Add Window</button>
+          <small class="text-muted d-block mt-1">Max 5 windows.</small>
+        </div>
         <div class="col-md-3">
           <label class="form-label">Frequency <small class="text-muted">(mins)</small></label>
           <input type="number" id="e_freq" class="form-control" value="${dc.frequency ?? 1}" min="1">
@@ -778,17 +861,16 @@ async function saveEdit() {
   let updated;
 
   if (type === 'text') {
-    const sd = document.getElementById('e_sd').value;
-    const st = document.getElementById('e_st').value;
-    const ed = document.getElementById('e_ed').value;
-    const et = document.getElementById('e_et').value;
+    const windows = readWindowsFromContainer('e_windows');
+    if (!windows.length) { showStatus('Please set at least one schedule window with start and end dates.', 'warning'); return; }
     updated = {
       ...a,
-      message:   document.getElementById('e_msg').value.trim(),
-      startDate: `${sd}T${st}:00+01:00`,
-      endDate:   `${ed}T${et}:00+01:00`,
-      isSpecial: document.getElementById('e_special').checked,
+      message:         document.getElementById('e_msg').value.trim(),
+      scheduleWindows: windows,
+      isSpecial:       document.getElementById('e_special').checked,
     };
+    delete updated.startDate;
+    delete updated.endDate;
 
   } else if (type === 'image') {
     const file = document.getElementById('e_file').files[0];
@@ -798,14 +880,11 @@ async function saveEdit() {
       try { images = [await uploadImage(file)]; }
       catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
     }
-    const sd = document.getElementById('e_sd').value;
-    const st = document.getElementById('e_st').value;
-    const ed = document.getElementById('e_ed').value;
-    const et = document.getElementById('e_et').value;
+    const windows = readWindowsFromContainer('e_windows');
+    if (!windows.length) { showStatus('Please set at least one schedule window with start and end dates.', 'warning'); return; }
     updated = {
       ...a,
-      startDate: `${sd}T${st}:00+01:00`,
-      endDate:   `${ed}T${et}:00+01:00`,
+      scheduleWindows: windows,
       displayCondition: {
         ...(a.displayCondition || {}),
         frequency:       parseInt(document.getElementById('e_freq').value, 10) || 1,
@@ -815,6 +894,8 @@ async function saveEdit() {
       images,
       isSpecial: document.getElementById('e_special').checked,
     };
+    delete updated.startDate;
+    delete updated.endDate;
 
   } else if (type === 'recurring_weekly') {
     const file = document.getElementById('e_file').files[0];

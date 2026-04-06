@@ -151,7 +151,16 @@ var announcementModule = {
         isActive = this.isRecurringWeeklyActive(announcement, now);
         console.log("DEBUG: Recurring weekly check for", announcement.id, "- Active:", isActive, "Day:", now.getDay(), "Required:", announcement.dayOfWeek);
       }
-      // Handle regular date-based announcements
+      // Handle schedule-windows announcements (multiple date ranges)
+      else if (announcement.scheduleWindows && announcement.scheduleWindows.length > 0) {
+        isActive = announcement.scheduleWindows.some(function(w) {
+          var wStart = new Date(w.start).getTime();
+          var wEnd   = new Date(w.end).getTime();
+          return currentTime >= wStart && currentTime <= wEnd;
+        });
+        console.log("DEBUG: Schedule-windows check for", announcement.id, "- Active:", isActive);
+      }
+      // Handle regular date-based announcements (legacy)
       else if (announcement.startDate && announcement.endDate) {
         var startTime = new Date(announcement.startDate).getTime();
         var endTime = new Date(announcement.endDate).getTime();
@@ -444,10 +453,12 @@ var announcementModule = {
     
     if (adhkarPosterCheck.shouldDisplay) {
       console.log("DEBUG: Adhkar poster should display - superseding all other announcements");
-      // Build schedule from settings so durations reflect mosque configuration
+      // Build schedule from per-prayer settings so durations reflect mosque configuration
       var _adhkarCfg = (window.appSettings || DEFAULT_SETTINGS).adhkar;
-      var _p1secs  = _adhkarCfg.poster1Seconds       || 90;
-      var _winsecs = (_adhkarCfg.displayWindowMinutes || 3) * 60;
+      var _prayerCfg = (_adhkarCfg.prayers || {})[adhkarPosterCheck.matchedPrayer] || {};
+      var _p1secs  = _prayerCfg.poster1Seconds        !== undefined ? _prayerCfg.poster1Seconds        : (_adhkarCfg.poster1Seconds        || 90);
+      var _winMins = _prayerCfg.displayWindowMinutes   !== undefined ? _prayerCfg.displayWindowMinutes  : (_adhkarCfg.displayWindowMinutes  || 3);
+      var _winsecs = _winMins * 60;
       var _p2secs  = Math.max(1, _winsecs - _p1secs);
       // Display Adhkar poster ONLY - skip all other announcements during this time
       imageData = {
@@ -1434,58 +1445,69 @@ var announcementModule = {
   checkAdhkarPoster: function(currentTime, dayOfWeek, isIrishSummerTime, jamaahTimes) {
     console.log("DEBUG ADHKAR: Checking Adhkar poster - currentTime:", currentTime, "dayOfWeek:", dayOfWeek, "jamaahTimes:", jamaahTimes);
     var result = { shouldDisplay: false };
-    
-    // For Friday Zohr: display at specific times
+
     var _adhkarCfg = (window.appSettings || DEFAULT_SETTINGS).adhkar;
+
+    // Helper: get per-prayer config (falls back to shared values or defaults)
+    function prayerCfg(prayerBase) {
+      var prayers = _adhkarCfg.prayers || {};
+      return prayers[prayerBase] || {};
+    }
+
+    // For Friday Zohr: display at specific times
     if (dayOfWeek === 5) { // Friday
       var fridayZohrTime = isIrishSummerTime
         ? timeUtils.timeToMinutes(_adhkarCfg.fridayZohrSummer || '14:10')
         : timeUtils.timeToMinutes(_adhkarCfg.fridayZohrWinter || '13:42');
-      var fridayZohrEndTime = fridayZohrTime + 3; // Display for 3 minutes
-      
+      var fridayZohrWindow = _adhkarCfg.fridayZohrWindowMinutes || 3;
+      var fridayZohrEndTime = fridayZohrTime + fridayZohrWindow;
+
       console.log("DEBUG ADHKAR: Friday check - fridayZohrTime:", fridayZohrTime, "fridayZohrEndTime:", fridayZohrEndTime);
       if (currentTime >= fridayZohrTime && currentTime < fridayZohrEndTime) {
         console.log("DEBUG ADHKAR: ✓ Friday Adhkar should display!");
         result.shouldDisplay = true;
         result.adhkarStartSeconds = fridayZohrTime * 60;
+        result.matchedPrayer = 'zohr';
         return result;
       }
     }
-    
-    // For other prayers: display Jamaah + N minutes
-    var adhkarDelay    = _adhkarCfg.delayAfterJamaah      || 8;
-    var adhkarDuration = _adhkarCfg.displayWindowMinutes  || 3;
-    
+
+    // For other prayers: display Jamaah + per-prayer delay/duration
     var jamaahList = [
-      { name: 'fajrJamaah', time: jamaahTimes.fajrJamaah, excludeFriday: false },
-      { name: 'zohrJamaah', time: jamaahTimes.zohrJamaah, excludeFriday: true }, // Excluded on Friday
-      { name: 'asrJamaah', time: jamaahTimes.asrJamaah, excludeFriday: false },
-      { name: 'magribJamaah', time: jamaahTimes.magribJamaah, excludeFriday: false },
-      { name: 'ishaJamaah', time: jamaahTimes.ishaJamaah, excludeFriday: false }
+      { name: 'fajrJamaah',   prayerBase: 'fajr',   time: jamaahTimes.fajrJamaah,   excludeFriday: false },
+      { name: 'zohrJamaah',   prayerBase: 'zohr',   time: jamaahTimes.zohrJamaah,   excludeFriday: true  },
+      { name: 'asrJamaah',    prayerBase: 'asr',    time: jamaahTimes.asrJamaah,    excludeFriday: false },
+      { name: 'magribJamaah', prayerBase: 'magrib', time: jamaahTimes.magribJamaah, excludeFriday: false },
+      { name: 'ishaJamaah',   prayerBase: 'isha',   time: jamaahTimes.ishaJamaah,   excludeFriday: false }
     ];
-    
+
     for (var i = 0; i < jamaahList.length; i++) {
       var jamaah = jamaahList[i];
-      
-      // Skip Friday Zohr (already handled above)
+
+      // Skip Friday Zohr (handled above)
       if (dayOfWeek === 5 && jamaah.excludeFriday) {
         continue;
       }
-      
+
       if (jamaah.time && !isNaN(jamaah.time)) {
-        var adhkarStartTime = jamaah.time + adhkarDelay;
-        var adhkarEndTime = adhkarStartTime + adhkarDuration;
-        
-        console.log("DEBUG ADHKAR: Checking", jamaah.name, "- jamaahTime:", jamaah.time, "adhkarWindow:", adhkarStartTime, "-", adhkarEndTime);
+        var pCfg = prayerCfg(jamaah.prayerBase);
+        var delay    = pCfg.delayAfterJamaah     !== undefined ? pCfg.delayAfterJamaah     : (_adhkarCfg.delayAfterJamaah     || 8);
+        var duration = pCfg.displayWindowMinutes !== undefined ? pCfg.displayWindowMinutes : (_adhkarCfg.displayWindowMinutes || 3);
+
+        var adhkarStartTime = jamaah.time + delay;
+        var adhkarEndTime   = adhkarStartTime + duration;
+
+        console.log("DEBUG ADHKAR: Checking", jamaah.name, "- jamaahTime:", jamaah.time, "delay:", delay, "window:", adhkarStartTime, "-", adhkarEndTime);
         if (currentTime >= adhkarStartTime && currentTime < adhkarEndTime) {
           console.log("DEBUG ADHKAR: ✓ Adhkar should display for", jamaah.name, "!");
           result.shouldDisplay = true;
           result.adhkarStartSeconds = adhkarStartTime * 60;
+          result.matchedPrayer = jamaah.prayerBase;
           return result;
         }
       }
     }
-    
+
     console.log("DEBUG ADHKAR: No Adhkar time matched - returning false");
     return result;
   }

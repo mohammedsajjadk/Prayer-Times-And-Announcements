@@ -10,11 +10,32 @@ var DEFAULT_SETTINGS = {
     {h:14,m:12},{h:16,m:30},{h:17,m:30},{h:18,m:30},{h:19,m:45},{h:21,m:15}
   ],
   jumuah: { summer: '13:45', winter: '13:20' },
+  selectedTheme: 'theme1',
+  labels: { column1: 'BEGINNING', column2: "JAMA'AH" },
   adhkar: {
-    delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90,
-    fridayZohrSummer: '14:10', fridayZohrWinter: '13:42'
+    fridayZohrSummer: '14:10',
+    fridayZohrWinter: '13:42',
+    fridayZohrWindowMinutes: 3,
+    prayers: {
+      fajr:   { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 },
+      zohr:   { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 },
+      asr:    { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 },
+      magrib: { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 },
+      isha:   { delayAfterJamaah: 8, displayWindowMinutes: 3, poster1Seconds: 90 }
+    }
   }
 };
+
+// Expose DEFAULT_SETTINGS as fallback so themes.js can read it before appSettings is available
+window._DEFAULT_SETTINGS_FALLBACK = DEFAULT_SETTINGS;
+
+function applyColumnLabels(settings) {
+  var lbl = (settings && settings.labels) || DEFAULT_SETTINGS.labels;
+  var col1 = document.getElementById('col1-header');
+  var col2 = document.getElementById('col2-header');
+  if (col1) col1.textContent = lbl.column1 || 'BEGINNING';
+  if (col2) col2.textContent = lbl.column2 || "JAMA'AH";
+}
 
 // Check if (h, m) matches the current Irish time within a 2-second window
 function isScheduledRefreshTime(h, m, irishH, irishM, irishS) {
@@ -24,8 +45,8 @@ function isScheduledRefreshTime(h, m, irishH, irishM, irishS) {
 // Load settings.json from GitHub/local; fall back to DEFAULT_SETTINGS silently
 fetch('/static/data/' + (window.MOSQUE_SLUG || 'tralee') + '/settings.json')
   .then(function(r) { return r.json(); })
-  .then(function(s) { window.appSettings = s; })
-  .catch(function() { /* fallback to DEFAULT_SETTINGS already in place */ });
+  .then(function(s) { window.appSettings = s; applyColumnLabels(s); })
+  .catch(function() { applyColumnLabels(DEFAULT_SETTINGS); });
 
 // Main application object
 var app = {  // Initialize the application
