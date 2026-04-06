@@ -3,7 +3,7 @@
     "summer": "13:30",
     "winter": "13:15"
   },
-  "selectedTheme": "theme1",
+  "selectedTheme": "theme2",
   "labels": {
     "column1": "ADHAN",
     "column2": "IQAMAH"
@@ -59,11 +59,31 @@
     "fridayZohrWinter": "13:25",
     "fridayZohrWindowMinutes": 3,
     "prayers": {
-      "fajr":   { "delayAfterJamaah": 8, "displayWindowMinutes": 3, "poster1Seconds": 90 },
-      "zohr":   { "delayAfterJamaah": 8, "displayWindowMinutes": 3, "poster1Seconds": 90 },
-      "asr":    { "delayAfterJamaah": 8, "displayWindowMinutes": 3, "poster1Seconds": 90 },
-      "magrib": { "delayAfterJamaah": 8, "displayWindowMinutes": 3, "poster1Seconds": 90 },
-      "isha":   { "delayAfterJamaah": 8, "displayWindowMinutes": 3, "poster1Seconds": 90 }
+      "fajr": {
+        "delayAfterJamaah": 8,
+        "displayWindowMinutes": 3,
+        "poster1Seconds": 90
+      },
+      "zohr": {
+        "delayAfterJamaah": 8,
+        "displayWindowMinutes": 3,
+        "poster1Seconds": 90
+      },
+      "asr": {
+        "delayAfterJamaah": 8,
+        "displayWindowMinutes": 3,
+        "poster1Seconds": 90
+      },
+      "magrib": {
+        "delayAfterJamaah": 8,
+        "displayWindowMinutes": 3,
+        "poster1Seconds": 90
+      },
+      "isha": {
+        "delayAfterJamaah": 8,
+        "displayWindowMinutes": 3,
+        "poster1Seconds": 90
+      }
     }
   }
 }
