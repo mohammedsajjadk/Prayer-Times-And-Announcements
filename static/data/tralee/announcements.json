@@ -58,7 +58,13 @@
       "/static/images/Tafseer of the Quran.jpg"
     ],
     "isSpecial": true,
-    "hide": false
+    "hide": false,
+    "suspendPeriods": [
+      {
+        "start": "2026-04-06T09:00:00+01:00",
+        "end": "2026-04-12T23:59:00+01:00"
+      }
+    ]
   },
   {
     "id": "womens_weekly_tuesday",
