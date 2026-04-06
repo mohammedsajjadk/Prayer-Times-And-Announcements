@@ -75,8 +75,8 @@
     "prayers": {
       "fajr": {
         "delayAfterJamaah": 8,
-        "displayWindowMinutes": 4,
-        "poster1Seconds": 150
+        "displayWindowMinutes": 5,
+        "poster1Seconds": 180
       },
       "zohr": {
         "delayAfterJamaah": 8,
@@ -85,8 +85,8 @@
       },
       "asr": {
         "delayAfterJamaah": 8,
-        "displayWindowMinutes": 4,
-        "poster1Seconds": 150
+        "displayWindowMinutes": 5,
+        "poster1Seconds": 180
       },
       "magrib": {
         "delayAfterJamaah": 8,
