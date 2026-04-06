@@ -8,11 +8,6 @@
     "column1": "ADHAN",
     "column2": "IQAMAH"
   },
-  "selectedTheme": "theme1",
-  "labels": {
-    "column1": "ADHAN",
-    "column2": "IQAMAH"
-  },
   "scheduledRefreshTimes": [
     {
       "h": 0,
