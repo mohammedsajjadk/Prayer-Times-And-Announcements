@@ -169,6 +169,77 @@ def _api_json_write_view(mosque_slug, file_key):
     return jsonify({'ok': True})
 
 
+_DEBUG_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'debug.log')
+_DEBUG_MAX_LINES = 5000  # Rotate after this many lines
+
+
+def _debug_log_allowed():
+    """Only localhost may access debug log endpoints."""
+    return request.remote_addr in ('127.0.0.1', '::1')
+
+
+@app.route('/api/debug-log', methods=['POST'])
+def debug_log_write():
+    if not _debug_log_allowed():
+        return jsonify({'error': 'Forbidden'}), 403
+    payload = request.get_json(silent=True) or {}
+    lines = payload.get('lines', [])
+    if not lines:
+        return jsonify({'ok': True})
+    os.makedirs(os.path.dirname(_DEBUG_LOG_PATH), exist_ok=True)
+    with open(_DEBUG_LOG_PATH, 'a', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+    # Rotate: keep only the last _DEBUG_MAX_LINES lines
+    try:
+        with open(_DEBUG_LOG_PATH, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+        if len(all_lines) > _DEBUG_MAX_LINES:
+            with open(_DEBUG_LOG_PATH, 'w', encoding='utf-8') as f:
+                f.writelines(all_lines[-_DEBUG_MAX_LINES:])
+    except OSError:
+        pass
+    return jsonify({'ok': True})
+
+
+@app.route('/api/debug-log', methods=['GET'])
+def debug_log_read():
+    if not _debug_log_allowed():
+        return Response('Forbidden', status=403, mimetype='text/plain')
+    try:
+        with open(_DEBUG_LOG_PATH, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except FileNotFoundError:
+        content = ''
+    return Response(content, mimetype='text/plain')
+
+
+@app.route('/api/debug-log', methods=['DELETE'])
+def debug_log_clear():
+    if not _debug_log_allowed():
+        return jsonify({'error': 'Forbidden'}), 403
+    try:
+        open(_DEBUG_LOG_PATH, 'w').close()
+    except OSError:
+        pass
+    return jsonify({'ok': True})
+
+
+# Dublin shares the same single debug log file
+@app.route('/dublin/api/debug-log', methods=['POST'])
+def dublin_debug_log_write():
+    return debug_log_write()
+
+
+@app.route('/dublin/api/debug-log', methods=['GET'])
+def dublin_debug_log_read():
+    return debug_log_read()
+
+
+@app.route('/dublin/api/debug-log', methods=['DELETE'])
+def dublin_debug_log_clear():
+    return debug_log_clear()
+
+
 # ─── Tralee routes ────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
@@ -178,6 +249,13 @@ def index():
 @app.route('/manage/')
 def manage_index():
     return render_template('manage/index.html', mosque=MOSQUE_CONFIGS['tralee'])
+
+
+@app.route('/manage/logs')
+def manage_logs():
+    if request.remote_addr not in ('127.0.0.1', '::1'):
+        return Response('Forbidden — debug logs are only accessible from localhost.', status=403, mimetype='text/plain')
+    return render_template('manage/logs.html', mosque=MOSQUE_CONFIGS['tralee'])
 
 
 @app.route('/manage/announcements/')
@@ -224,6 +302,13 @@ def dublin_index():
 @app.route('/dublin/manage/')
 def dublin_manage_index():
     return render_template('manage/index.html', mosque=MOSQUE_CONFIGS['dublin'])
+
+
+@app.route('/dublin/manage/logs')
+def dublin_manage_logs():
+    if request.remote_addr not in ('127.0.0.1', '::1'):
+        return Response('Forbidden — debug logs are only accessible from localhost.', status=403, mimetype='text/plain')
+    return render_template('manage/logs.html', mosque=MOSQUE_CONFIGS['dublin'])
 
 
 @app.route('/dublin/manage/announcements/')

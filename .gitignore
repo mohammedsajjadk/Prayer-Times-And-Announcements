@@ -4,3 +4,5 @@ prayer_times_output.txt
 __pycache__/*
 tests/__pycache__/*
 .idea/*
+drafts/*
+logs/

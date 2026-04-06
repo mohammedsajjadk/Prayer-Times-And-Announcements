@@ -125,6 +125,8 @@
     
   <!-- JavaScript -->
   <script>window.MOSQUE_SLUG = '{{ mosque_slug }}';</script>
+  <!-- Debug logger (local mode only — no-op in production) -->
+  <script src="{{ url_for('static', filename='js/debug.js') }}"></script>
   <script src="{{ url_for('static', filename='js/config.js') }}"></script>
   <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
   <script src="{{ url_for('static', filename='js/time.js') }}"></script>

@@ -22,6 +22,7 @@
     <div class="d-flex gap-2">
       <a href="{{ mosque.announcementsManage }}" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
       <a href="{{ mosque.settingsManage }}" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
+      <a href="{{ mosque.manageBase }}logs" class="btn btn-outline-secondary btn-sm" id="logsLink" style="display:none">&#128196; Debug Logs</a>
       <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
     </div>
   </div>
@@ -695,6 +696,12 @@ function toggleAddPanel() {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 showTokenState();
 loadMonths();
+
+// Show Debug Logs link only on localhost
+if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+  var logsLink = document.getElementById('logsLink');
+  if (logsLink) logsLink.style.display = '';
+}
 </script>
 </body>
 </html>

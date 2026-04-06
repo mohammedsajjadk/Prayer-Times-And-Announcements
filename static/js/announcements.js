@@ -65,6 +65,9 @@ var displayState = {
 };
 
 var announcementModule = {
+  // Timer handle so we can cancel a pending cleanup when a new poster replaces the old one
+  _slideshowCleanupTimer: null,
+
   // Helper function to check if a control entry is hidden
   isControlHidden: function(controlId) {
     if (!dynamicAnnouncements || !Array.isArray(dynamicAnnouncements)) {
@@ -79,6 +82,15 @@ var announcementModule = {
 
     // hide: true always wins — permanently hidden regardless of windows
     if (controlEntry.hide === true) return true;
+
+    // suspendPeriods: if current time falls inside any suspend period, treat as hidden
+    if (controlEntry.suspendPeriods && controlEntry.suspendPeriods.length > 0) {
+      var nowMsC = new Date().getTime();
+      var suspended = controlEntry.suspendPeriods.some(function(p) {
+        return nowMsC >= new Date(p.start).getTime() && nowMsC <= new Date(p.end).getTime();
+      });
+      if (suspended) return true;
+    }
 
     // hide: false + schedule windows → active only when currently inside a window
     if (controlEntry.scheduleWindows && controlEntry.scheduleWindows.length > 0) {
@@ -232,6 +244,15 @@ var announcementModule = {
     // Check if announcement is hidden
     if (announcement.hide === true) {
       return false;
+    }
+
+    // suspendPeriods: if current time falls inside any suspend period, treat as hidden
+    if (announcement.suspendPeriods && announcement.suspendPeriods.length > 0) {
+      var nowMsR = now.getTime();
+      var suspendedR = announcement.suspendPeriods.some(function(p) {
+        return nowMsR >= new Date(p.start).getTime() && nowMsR <= new Date(p.end).getTime();
+      });
+      if (suspendedR) return false;
     }
 
     // Check optional date-range schedule windows — if present, must be inside one
@@ -568,6 +589,15 @@ var announcementModule = {
     }
     // If no dynamic announcement, use standard recurring announcements
     else {
+      // Helper: resolve message from control entry (falls back to hardcoded default)
+      var self = this;
+      function _controlMsg(controlId, defaultFn) {
+        var entry = Array.isArray(dynamicAnnouncements) && dynamicAnnouncements.find(function(a) {
+          return a.id === controlId && a.type === 'control';
+        });
+        return (entry && entry.message) ? entry.message : defaultFn();
+      }
+
       // Regular announcements logic
       if (isIrishSummerTime) {
         if (!this.isControlHidden("thursday_darood_control") &&
@@ -576,15 +606,15 @@ var announcementModule = {
           currentTime < magribJamaahTime + 5
         ) {
           // Thursday
-          message = announcements.thursday_darood();
+          message = _controlMsg('thursday_darood_control', announcements.thursday_darood);
         }
         else if (!this.isControlHidden("friday_tafseer_control") && dayOfWeek === 4 && currentTime >= magribJamaahTime + 6 && currentTime < (23 * 60 + 59)) {
           // Thursday After Magrib
-          message = announcements.friday_tafseer();
+          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
         }
         else if (!this.isControlHidden("friday_tafseer_control") && dayOfWeek === 5 && currentTime > (0 * 60 + 1) && currentTime < magribJamaahTime + 10) {
           // Friday
-          message = announcements.friday_tafseer();
+          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
         }
       } else {
         // Winter time rules
@@ -594,7 +624,7 @@ var announcementModule = {
           currentTime < ishaJamaahTime + 5
         ) {
           // Thursday
-          message = announcements.thursday_darood();
+          message = _controlMsg('thursday_darood_control', announcements.thursday_darood);
         } 
         else if (!this.isControlHidden("friday_tafseer_control") &&
           dayOfWeek === 4 &&
@@ -602,14 +632,14 @@ var announcementModule = {
           currentTime < 23 * 60 + 59
         ) {
           // Thursday After Isha
-          message = announcements.friday_tafseer();
+          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
         } else if (!this.isControlHidden("friday_tafseer_control") &&
           dayOfWeek === 5 &&
           currentTime > 0 * 60 + 1 &&
           currentTime < ishaJamaahTime + 10
         ) {
           // Friday
-          message = announcements.friday_tafseer();
+          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
         }
       }
     }
@@ -969,9 +999,9 @@ var announcementModule = {
       var now = new Date();
       var currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       var elapsedSeconds = currentTotalSeconds - (imageData.adhkarStartSeconds || 0);
-      var _adhkarCfgH = (window.appSettings || DEFAULT_SETTINGS).adhkar;
-      var _p1secs  = _adhkarCfgH.poster1Seconds       || 90;
-      var _winsecs = (_adhkarCfgH.displayWindowMinutes || 3) * 60;
+      // Use durations already computed in updateAnnouncement (per-prayer config)
+      var _p1secs  = imageData.schedule[0].duration;
+      var _winsecs = imageData.totalActiveTime;
       var adhkarImage, remaining;
       if (elapsedSeconds < _p1secs) {
         adhkarImage = imageData.schedule[0];
@@ -980,7 +1010,11 @@ var announcementModule = {
         adhkarImage = imageData.schedule[1];
         remaining   = _winsecs - elapsedSeconds;
       }
-      remaining = Math.max(1, remaining);
+      // If the window has fully elapsed, do nothing — don't start a 1-sec slideshow
+      if (remaining <= 0) {
+        console.log("DEBUG ADHKAR: Window elapsed (remaining:", remaining, ") - skipping display");
+        return;
+      }
       console.log("DEBUG ADHKAR: elapsedSeconds:", elapsedSeconds, "remaining:", remaining, "- showing:", adhkarImage.imagePath);
       this.displaySingleImage(
         adhkarImage.imagePath,
@@ -1092,11 +1126,21 @@ var announcementModule = {
         return;
       } else {
         console.log("DEBUG: Different image requested, replacing existing slideshow");
+        // Cancel pending cleanup timer from the previous image before replacing
+        if (announcementModule._slideshowCleanupTimer) {
+          clearTimeout(announcementModule._slideshowCleanupTimer);
+          announcementModule._slideshowCleanupTimer = null;
+        }
         // Clean up existing slideshow first - skip showPrayerElements since we're immediately replacing
         this.cleanupAllPosterElements(null, true);
       }
     } else {
       console.log("DEBUG: No existing slideshow, creating new one");
+      // Cancel any stale cleanup timer before creating a fresh slideshow
+      if (announcementModule._slideshowCleanupTimer) {
+        clearTimeout(announcementModule._slideshowCleanupTimer);
+        announcementModule._slideshowCleanupTimer = null;
+      }
       // Clean up any existing poster elements first to ensure clean state
       this.cleanupAllPosterElements(null, true);
     }
@@ -1225,7 +1269,7 @@ var announcementModule = {
     };
 
     // Set up cleanup after the specified duration
-    setTimeout(cleanupSlideshow, duration * 1000);
+    announcementModule._slideshowCleanupTimer = setTimeout(cleanupSlideshow, duration * 1000);
   },
 
   // Display rotating images with proper timing
