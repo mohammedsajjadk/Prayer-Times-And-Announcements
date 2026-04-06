@@ -327,10 +327,7 @@ async function ghPut(path, contentB64, sha, message) {
     },
     body: JSON.stringify(body),
   });
-  if (!resp.ok) {
-    const e = await resp.json().catch(() => ({}));
-    throw new Error(`GitHub error (${resp.status}): ${e.message || 'unknown'}`);
-  }
+  // Return the raw response (caller handles errors, including 409 retry)
   return resp;
 }
 
@@ -368,7 +365,20 @@ async function saveAnnouncements(announcements, sha, message) {
   }
   const json = JSON.stringify(announcements, null, 2);
   const b64  = btoa(unescape(encodeURIComponent(json)));
-  const resp = await ghPut(JSON_PATH, b64, sha, message);
+  let resp = await ghPut(JSON_PATH, b64, sha, message);
+  // If GitHub rejects with 409 (stale SHA), re-fetch the current SHA and retry once
+  if (!resp.ok && resp.status === 409) {
+    const fresh = await ghGet(JSON_PATH);
+    if (fresh.ok) {
+      const freshData = await fresh.json();
+      window._annSha = freshData.sha;
+    }
+    resp = await ghPut(JSON_PATH, b64, window._annSha, message);
+  }
+  if (!resp.ok) {
+    const e = await resp.json().catch(() => ({}));
+    throw new Error(`GitHub error (${resp.status}): ${e.message || 'unknown'}`);
+  }
   // Update SHA immediately so the next commit never sends a stale SHA (→ 409)
   const data = await resp.json();
   if (data.content && data.content.sha) window._annSha = data.content.sha;
@@ -389,7 +399,11 @@ async function uploadImage(file) {
         sha = check.ok ? (await check.json()).sha : undefined;
       } catch (_) { sha = undefined; }
       try {
-        await ghPut(path, b64, sha, `Upload image: ${file.name}`);
+        const imgResp = await ghPut(path, b64, sha, `Upload image: ${file.name}`);
+        if (!imgResp.ok) {
+          const e = await imgResp.json().catch(() => ({}));
+          throw new Error(`GitHub error (${imgResp.status}): ${e.message || 'unknown'}`);
+        }
         resolve(`/static/images/${file.name}`);
       } catch (e) { reject(e); }
     };

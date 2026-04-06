@@ -264,10 +264,7 @@ async function ghPut(path, b64, sha, msg) {
     },
     body: JSON.stringify(body),
   });
-  if (!resp.ok) {
-    const e = await resp.json().catch(() => ({}));
-    throw new Error(`GitHub error (${resp.status}): ${e.message || 'unknown'}`);
-  }
+  // Return the raw response (caller handles errors, including 409 retry)
   return resp;
 }
 
@@ -422,7 +419,20 @@ async function saveSettings() {
   showStatus('Saving to GitHub…', 'info');
   try {
     const b64  = btoa(unescape(encodeURIComponent(JSON.stringify(settings, null, 2))));
-    const resp = await ghPut(SETTINGS_PATH, b64, _sha, 'Update settings.json');
+    let resp = await ghPut(SETTINGS_PATH, b64, _sha, 'Update settings.json');
+    // If GitHub rejects with 409 (stale SHA), re-fetch the current SHA and retry once
+    if (!resp.ok && resp.status === 409) {
+      const fresh = await ghGet(SETTINGS_PATH);
+      if (fresh.ok) {
+        const freshData = await fresh.json();
+        _sha = freshData.sha;
+      }
+      resp = await ghPut(SETTINGS_PATH, b64, _sha, 'Update settings.json');
+    }
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error(`GitHub error (${resp.status}): ${e.message || 'unknown'}`);
+    }
     const data = await resp.json();
     if (data.content && data.content.sha) _sha = data.content.sha;
     showStatus('&#10003; Settings saved to GitHub.', 'success');
