@@ -3,10 +3,11 @@
     "summer": "13:30",
     "winter": "13:15"
   },
-  "selectedTheme": "theme1",
+  "selectedTheme": "theme21",
   "labels": {
     "column1": "ADHAN",
-    "column2": "IQAMAH"
+    "column2": "IQAMAH",
+    "beginningColumnSize": "smaller"
   },
   "scheduledRefreshTimes": [
     {

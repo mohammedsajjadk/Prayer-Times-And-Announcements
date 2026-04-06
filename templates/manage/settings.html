@@ -183,6 +183,21 @@
           </label>
           <input type="text" id="label_col2" class="form-control text-uppercase" value="JAMA'AH" maxlength="20">
         </div>
+        <div class="col-md-4">
+          <label class="form-label">Column 1 Font Size
+            <small class="text-muted d-block">Beginning/Adhan time display size</small>
+          </label>
+          <div class="mt-1">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="beginningColumnSize" id="size_smaller" value="smaller" checked>
+              <label class="form-check-label" for="size_smaller">Smaller <small class="text-muted">(7.5vw)</small></label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="beginningColumnSize" id="size_same" value="same">
+              <label class="form-check-label" for="size_same">Same as col 2 <small class="text-muted">(10.5vw)</small></label>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -296,6 +311,9 @@ function populateForm(s) {
   const lbl = s.labels || {};
   document.getElementById('label_col1').value = lbl.column1 || 'BEGINNING';
   document.getElementById('label_col2').value = lbl.column2 || "JAMA'AH";
+  document.querySelectorAll('[name="beginningColumnSize"]').forEach(r => {
+    r.checked = r.value === (lbl.beginningColumnSize || 'smaller');
+  });
 
   // Refresh times
   const list = document.getElementById('refreshList');
@@ -378,6 +396,7 @@ function _validateAndBuildSettings() {
     labels: {
       column1: document.getElementById('label_col1').value.trim() || 'BEGINNING',
       column2: document.getElementById('label_col2').value.trim() || "JAMA'AH",
+      beginningColumnSize: (document.querySelector('[name="beginningColumnSize"]:checked') || {}).value || 'smaller',
     },
     scheduledRefreshTimes: getRefreshTimes(),
     adhkar: {
@@ -456,17 +475,26 @@ const THEMES_META = [
   { key: 'theme17', name: 'High Contrast',  bg: '#000000', hl: '#FFFF00' },
   { key: 'theme18', name: 'Blue Grey',      bg: '#37474F', hl: '#80CBC4' },
   { key: 'theme19', name: 'Charcoal Green', bg: '#1C1C1C', hl: '#00FF7F' },
-  { key: 'theme20', name: 'Crimson Dark',   bg: '#14000A', hl: '#FF1493' },
+  { key: 'theme20', name: 'Crimson Dark',        bg: '#14000A', hl: '#FF1493' },
+  { key: 'theme21', name: 'Clean White \u2014 Blue Bands', bg: '#FFFFFF', hl: '#0055CC' },
+  { key: 'theme22', name: 'Dark Navy \u2014 Blue Bands',  bg: '#001529', hl: '#0055CC' },
 ];
 
 function buildThemeSwatches() {
   const grid = document.getElementById('themeGrid');
-  grid.innerHTML = THEMES_META.map(m => `
+  const BAND_KEYS = ['theme21', 'theme22'];
+  const standardThemes = THEMES_META.filter(m => !BAND_KEYS.includes(m.key));
+  const bandThemes = THEMES_META.filter(m => BAND_KEYS.includes(m.key));
+  const swatchHtml = m => `
     <div class="theme-swatch" id="swatch-${m.key}" data-theme="${m.key}"
          style="background:${m.bg}" title="${m.name}"
          onclick="selectThemeSwatch('${m.key}')">
       <div class="swatch-dot" style="background:${m.hl}"></div>
-    </div>`).join('');
+    </div>`;
+  grid.innerHTML =
+    standardThemes.map(swatchHtml).join('') +
+    `<div class="w-100 mt-2 mb-1"><small class="text-muted fw-semibold">Blue Band variants</small></div>` +
+    bandThemes.map(swatchHtml).join('');
 }
 
 function selectThemeSwatch(themeName) {

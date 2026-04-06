@@ -9,6 +9,15 @@
     --next-prayer-border-color: rgba(0, 240, 255, 0.8); /* Slightly transparent highlight color */
     --underline-gradient: linear-gradient(90deg, var(--highlight-color) 0%, var(--border-color) 100%);
     --underline-glow: 0 1px 5px rgba(0, 240, 255, 0.4);
+    /* Header band — defaults match main bg so all existing themes are unchanged */
+    --header-bg-color: var(--bg-color);
+    --header-text-color: var(--text-color);
+    --header-time-color: var(--highlight-color);
+    /* Layout overrides — defaults preserve existing behaviour */
+    --header-width: 98%;
+    --header-margin-bottom: 0.5vw;
+    --announcement-width: 100vh;
+    --beginning-font-size: 7.5vw;
 }
 
 
@@ -41,7 +50,7 @@ body, html {
 
 /* Announcement bar at the bottom */
 .announcement {
-    width: 100vh; /* Use viewport height for width since it's rotated */
+    width: var(--announcement-width); /* Use viewport height for width since it's rotated */
     background-color: var(--announcement-bg-color);
     padding: 0.3vh;
     text-align: center;
@@ -182,7 +191,9 @@ body, html {
     align-items: center;
     justify-content: center;
     font-family: 'DS-Digital', monospace;
-    color: var(--highlight-color);
+    color: var(--header-time-color);
+    width: 100%;
+    background-color: var(--header-bg-color);
     margin-bottom: 1vh;
     position: relative;
 }
@@ -210,7 +221,7 @@ body, html {
     font-size: 12vw;  /* Increased from 11vw to 12.5vw */
     font-weight: bold;
     line-height: 1;
-    color: var(--highlight-color);
+    color: var(--header-time-color);
     position: relative;
     top: -0.05em; /* Fine-tune vertical alignment */
     margin-right: 0.05em;
@@ -244,11 +255,13 @@ body, html {
 .date-container {
     display: flex;
     justify-content: space-between;
-    width: 98%;
+    width: var(--header-width);
     font-size: 2.2vw; /* Increased from 3.0vw to 3.5vw */
     text-align: center;
     margin-top: -2vh;
-    margin-bottom: 0.5vw;
+    margin-bottom: var(--header-margin-bottom);
+    background-color: var(--header-bg-color);
+    color: var(--header-text-color);
 }
 
 .islamic-date {
@@ -380,7 +393,7 @@ body, html {
 }
 
 .beginning .prayer-time-value {
-    font-size: 7.5vw; /* Increased from 6.5vw to 7.5vw */
+    font-size: var(--beginning-font-size);
 }
 
 .prayer-time-value.beginning,

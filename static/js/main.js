@@ -11,7 +11,7 @@ var DEFAULT_SETTINGS = {
   ],
   jumuah: { summer: '13:45', winter: '13:20' },
   selectedTheme: 'theme1',
-  labels: { column1: 'BEGINNING', column2: "JAMA'AH" },
+  labels: { column1: 'BEGINNING', column2: "JAMA'AH", beginningColumnSize: 'smaller' },
   adhkar: {
     fridayZohrSummer: '14:10',
     fridayZohrWinter: '13:42',
@@ -36,6 +36,8 @@ function applyColumnLabels(settings) {
   var col2 = document.getElementById('col2-header');
   if (col1) col1.textContent = lbl.column1 || 'BEGINNING';
   if (col2) col2.textContent = lbl.column2 || "JAMA'AH";
+  var size = (lbl.beginningColumnSize === 'same') ? '10.5vw' : '7.5vw';
+  document.documentElement.style.setProperty('--beginning-font-size', size);
 }
 
 // Check if (h, m) matches the current Irish time within a 2-second window

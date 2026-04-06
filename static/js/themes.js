@@ -245,6 +245,42 @@ var themes = {
     '--announcement-text-color': '#FF1493',
     '--announcement-warning': '#FFD700',
     '--next-prayer-border-color': 'rgba(255, 20, 147, 0.8)'
+  },
+  // 21. Clean White — Blue Bands (white prayer table, blue header + announcement)
+  theme21: {
+    name: 'Clean White \u2014 Blue Bands',
+    '--bg-color': '#FFFFFF',
+    '--text-color': '#003366',
+    '--highlight-color': '#0055CC',
+    '--border-color': '#4499FF',
+    '--announcement-bg-color': '#0055CC',
+    '--announcement-text-color': '#FFFFFF',
+    '--announcement-warning': '#CC0000',
+    '--next-prayer-border-color': 'rgba(0, 85, 204, 0.8)',
+    '--header-bg-color': '#0055CC',
+    '--header-text-color': '#FFFFFF',
+    '--header-time-color': '#FFFFFF',
+    '--header-width': '100%',
+    '--header-margin-bottom': '0',
+    '--announcement-width': '100%'
+  },
+  // 22. Dark Navy — Blue Bands (dark navy prayer table, blue header + announcement)
+  theme22: {
+    name: 'Dark Navy \u2014 Blue Bands',
+    '--bg-color': '#001529',
+    '--text-color': '#FFFFFF',
+    '--highlight-color': '#00F0FF',
+    '--border-color': '#0088FF',
+    '--announcement-bg-color': '#0055CC',
+    '--announcement-text-color': '#FFFFFF',
+    '--announcement-warning': '#ff0000',
+    '--next-prayer-border-color': 'rgba(0, 240, 255, 0.8)',
+    '--header-bg-color': '#0055CC',
+    '--header-text-color': '#FFFFFF',
+    '--header-time-color': '#FFFFFF',
+    '--header-width': '100%',
+    '--header-margin-bottom': '0',
+    '--announcement-width': '100%'
   }
 };
 
@@ -282,6 +318,11 @@ var themeModule = {
   // Apply a theme object to CSS custom properties on the document root
   applyTheme: function(theme) {
     var root = document.documentElement;
+    // Reset header-band vars first so switching away from theme21/22 reverts to defaults
+    ['--header-bg-color', '--header-text-color', '--header-time-color',
+     '--header-width', '--header-margin-bottom', '--announcement-width'].forEach(function(p) {
+      root.style.removeProperty(p);
+    });
     for (var property in theme) {
       if (theme.hasOwnProperty(property) && property.indexOf('--') === 0) {
         root.style.setProperty(property, theme[property]);

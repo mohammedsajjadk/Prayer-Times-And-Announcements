@@ -6,7 +6,8 @@
   "selectedTheme": "theme1",
   "labels": {
     "column1": "BEGINNING",
-    "column2": "JAMA'AH"
+    "column2": "JAMA'AH",
+    "beginningColumnSize": "smaller"
   },
   "scheduledRefreshTimes": [
     {
