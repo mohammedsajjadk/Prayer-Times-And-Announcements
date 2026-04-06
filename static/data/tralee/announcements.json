@@ -82,7 +82,7 @@
       "/static/images/Womens Weekly.png"
     ],
     "isSpecial": true,
-    "hide": true
+    "hide": false
   },
   {
     "id": "womens_weekly_wednesday",
