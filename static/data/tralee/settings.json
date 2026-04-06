@@ -70,33 +70,33 @@
   "adhkar": {
     "fridayZohrSummer": "14:08",
     "fridayZohrWinter": "13:42",
-    "fridayZohrWindowMinutes": 3,
-    "fridayZohrPoster1Seconds": 120,
+    "fridayZohrWindowMinutes": 4,
+    "fridayZohrPoster1Seconds": 150,
     "prayers": {
       "fajr": {
         "delayAfterJamaah": 8,
         "displayWindowMinutes": 4,
-        "poster1Seconds": 120
+        "poster1Seconds": 150
       },
       "zohr": {
         "delayAfterJamaah": 8,
         "displayWindowMinutes": 4,
-        "poster1Seconds": 120
+        "poster1Seconds": 150
       },
       "asr": {
         "delayAfterJamaah": 8,
         "displayWindowMinutes": 4,
-        "poster1Seconds": 120
+        "poster1Seconds": 150
       },
       "magrib": {
         "delayAfterJamaah": 8,
         "displayWindowMinutes": 4,
-        "poster1Seconds": 120
+        "poster1Seconds": 150
       },
       "isha": {
         "delayAfterJamaah": 8,
         "displayWindowMinutes": 4,
-        "poster1Seconds": 120
+        "poster1Seconds": 150
       }
     }
   }
