@@ -24,11 +24,9 @@
 
 <nav class="navbar navbar-dark bg-dark mb-4">
   <div class="container-lg">
-    <span class="navbar-brand">&#128226; Announcements Admin</span>
+    <a class="navbar-brand text-decoration-none text-white" href="{{ mosque.manageBase }}">&#8592; Dashboard</a>
     <div class="d-flex gap-2">
-      <a href="{{ mosque.manageBase }}" class="btn btn-outline-light btn-sm">&#128197; Prayer Times</a>
-      <a href="{{ mosque.settingsManage }}" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
-      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live &#8599;</a>
     </div>
   </div>
 </nav>
@@ -281,6 +279,57 @@ function fmtIso(iso) {
   } catch (_) { return iso.substring(0, 16).replace('T', ' '); }
 }
 
+// windows array + label → HTML line showing real-time status + date range
+// e.g. fmtWindows(a.scheduleWindows, 'Shown only within', 'text-bg-success', 'text-bg-secondary')
+function fmtWindows(windows, label, activeCls, nextCls) {
+  if (!windows || !windows.length) return '';
+  activeCls = activeCls || 'text-bg-success';
+  nextCls   = nextCls   || 'text-bg-secondary';
+  const now    = Date.now();
+  const active = windows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
+  const next   = windows.find(w => new Date(w.start).getTime() > now);
+  let badge;
+  if (active)     badge = `<span class="badge ${activeCls} me-1">Now</span>`;
+  else if (next)  badge = `<span class="badge ${nextCls} me-1">Upcoming</span>`;
+  else            badge = `<span class="badge bg-light text-dark border me-1">Expired</span>`;
+  const ref = active || next;
+  const dateStr = ref ? ` ${fmtIso(ref.start)} → ${fmtIso(ref.end)}` : '';
+  const count = windows.length > 1 ? ` (${windows.length} windows)` : '';
+  return `<div class="mt-1 small text-muted">${badge}<em>${label}:</em>${dateStr}${count}</div>`;
+}
+
+// Compute a single overall status pill for the card header
+function computeStatus(a) {
+  const now = Date.now();
+  if (a.hide === true) {
+    return '<span class="badge text-bg-danger">Hidden</span>';
+  }
+  // Check if currently inside a suppress period
+  if (a.suspendPeriods && a.suspendPeriods.length) {
+    const suppressed = a.suspendPeriods.find(
+      w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime()
+    );
+    if (suppressed) return '<span class="badge text-bg-warning text-dark">Suppressed now</span>';
+  }
+  // Check schedule windows — if defined and none active/upcoming, it's inactive
+  if (a.scheduleWindows && a.scheduleWindows.length) {
+    const active = a.scheduleWindows.find(
+      w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime()
+    );
+    const next = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
+    if (!active && !next) return '<span class="badge bg-light text-dark border">Inactive</span>';
+    if (!active && next)  return '<span class="badge text-bg-secondary">Active soon</span>';
+  }
+  // For announcements with startDate/endDate but no scheduleWindows, check the date range
+  if (!a.scheduleWindows || !a.scheduleWindows.length) {
+    const start = a.startDate ? new Date(a.startDate).getTime() : 0;
+    const end   = a.endDate   ? new Date(a.endDate).getTime()   : Infinity;
+    if (now < start) return '<span class="badge text-bg-secondary">Active soon</span>';
+    if (now > end)   return '<span class="badge bg-light text-dark border">Inactive</span>';
+  }
+  return '<span class="badge text-bg-success">Active</span>';
+}
+
 // ─── Token ────────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('gh_token') || ''; }
 function saveToken() {
@@ -433,91 +482,60 @@ function renderList(items) {
   const html = items.map((a, idx) => {
     const type   = a.type || 'text';
     const hidden = a.hide === true;
-    const typeClass = type === 'control'          ? 'type-control'
-                    : type === 'recurring_weekly'  ? 'type-recurring'
-                    : type === 'image'             ? 'type-image' : '';
+    const typeClass  = type === 'control'         ? 'type-control'
+                     : type === 'recurring_weekly' ? 'type-recurring'
+                     : type === 'image'            ? 'type-image' : '';
     const hiddenClass = hidden ? 'is-hidden' : '';
 
     let detail = '';
     if (type === 'control') {
-      let windowInfo = '';
-      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
-        const now    = Date.now();
-        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
-        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
-        const badge  = active ? '<span class="badge text-bg-success me-1">Window Active</span>'
-                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming Window</span>'
-                              : '<span class="badge bg-light text-dark border me-1">Windows Expired</span>';
-        windowInfo = `<div class="mt-1 small">${badge}${a.scheduleWindows.length} window(s)</div>`;
-      }
-      detail = `<span class="text-muted">${a.description || ''}</span>${windowInfo}`;
+      detail = `
+        <div class="text-muted">${a.description || ''}</div>
+        ${a.message ? `<div class="mt-1 small fst-italic">"${a.message}"</div>` : ''}
+        ${fmtWindows(a.scheduleWindows, 'Shown only within')}
+        ${fmtWindows(a.suspendPeriods, 'Suppressed during', 'text-bg-warning text-dark', 'text-bg-secondary')}`;
 
     } else if (type === 'recurring_weekly') {
-      const day      = DAYS[a.dayOfWeek] || a.dayOfWeek;
-      const imgs     = (a.images || []).map(i =>
+      const day  = DAYS[a.dayOfWeek] || a.dayOfWeek;
+      const imgs = (a.images || []).map(i =>
         `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
       ).join('');
       const seasonal = fmtSeasonal(a.seasonalTiming);
       const dc       = fmtDC(a.displayCondition);
-      let windowBadge = '';
-      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
-        const now    = Date.now();
-        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
-        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
-        const badge  = active ? '<span class="badge text-bg-success me-1">Active</span>'
-                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming</span>'
-                              : '<span class="badge bg-light text-dark border me-1">Expired</span>';
-        windowBadge = `<div class="mt-1 small">${badge}${a.scheduleWindows.length} date window(s)</div>`;
-      }
       detail = `
         <div>Every <strong>${day}</strong> ${dc}</div>
         ${seasonal ? `<div class="mt-1">${seasonal}</div>` : ''}
         ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}
-        ${windowBadge}`;
+        ${fmtWindows(a.scheduleWindows, 'Shown only within')}
+        ${fmtWindows(a.suspendPeriods, 'Suppressed during', 'text-bg-warning text-dark', 'text-bg-secondary')}`;
 
     } else if (type === 'image') {
       const imgs = (a.images || []).map(i =>
         `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
       ).join('');
       const dc = fmtDC(a.displayCondition);
-      let dateInfo;
-      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
-        const now    = Date.now();
-        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
-        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
-        const badge  = active ? '<span class="badge text-bg-success me-1">Active</span>'
-                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming</span>'
-                              : '<span class="badge bg-light text-dark border me-1">Expired</span>';
-        dateInfo = badge + a.scheduleWindows.length + ' window' + (a.scheduleWindows.length > 1 ? 's' : '') +
-                   (next ? ' · ' + fmtIso(next.start) + ' → ' + fmtIso(next.end) : active ? ' · Active now' : '');
-      } else {
-        dateInfo = fmtIso(a.startDate) + ' → ' + fmtIso(a.endDate);
-      }
+      const dateStr = a.scheduleWindows && a.scheduleWindows.length
+        ? ''   // shown by fmtWindows below
+        : `<div>${fmtIso(a.startDate)} → ${fmtIso(a.endDate)} ${dc}</div>`;
       detail = `
-        <div>${dateInfo} ${dc}</div>
-        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}`;
+        ${dateStr}
+        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}
+        ${fmtWindows(a.scheduleWindows, 'Shown only within')}
+        ${!dateStr ? `<div class="small text-muted">${dc}</div>` : ''}`;
 
     } else {
       // text
       const specBadge = a.isSpecial ? '<span class="badge text-bg-danger me-1">Special</span>' : '';
-      let dateInfo;
-      if (a.scheduleWindows && a.scheduleWindows.length > 0) {
-        const now    = Date.now();
-        const active = a.scheduleWindows.find(w => now >= new Date(w.start).getTime() && now <= new Date(w.end).getTime());
-        const next   = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
-        const badge  = active ? '<span class="badge text-bg-success me-1">Active</span>'
-                     : next   ? '<span class="badge text-bg-secondary me-1">Upcoming</span>'
-                              : '<span class="badge bg-light text-dark border me-1">Expired</span>';
-        dateInfo = badge + a.scheduleWindows.length + ' window' + (a.scheduleWindows.length > 1 ? 's' : '') +
-                   (next ? ' · ' + fmtIso(next.start) + ' → ' + fmtIso(next.end) : active ? ' · Active now' : '');
-      } else {
-        dateInfo = fmtIso(a.startDate) + ' → ' + fmtIso(a.endDate);
-      }
+      const dateStr = a.scheduleWindows && a.scheduleWindows.length
+        ? ''
+        : `<div>${fmtIso(a.startDate)} → ${fmtIso(a.endDate)}</div>`;
       detail = `
-        <div>${specBadge}${dateInfo}</div>
-        <div class="mt-1">${a.message || ''}</div>`;
+        <div>${specBadge}${a.message || ''}</div>
+        ${dateStr}
+        ${fmtWindows(a.scheduleWindows, 'Shown only within')}`;
     }
 
+    const status       = computeStatus(a);
     const hideBtnLabel = hidden ? 'Show' : 'Hide';
     const hideBtnClass = hidden ? 'btn-outline-success' : 'btn-outline-secondary';
 
@@ -526,12 +544,14 @@ function renderList(items) {
         <div class="card-body py-2">
           <div class="d-flex justify-content-between align-items-start gap-2">
             <div style="min-width:0">
-              <span class="badge bg-secondary me-1">${type}</span>
-              ${hidden ? '<span class="badge bg-danger me-1">HIDDEN</span>' : ''}
-              <strong>${a.id}</strong>
-              <div class="mt-1 small">${detail}</div>
+              <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
+                <span class="badge bg-secondary">${type}</span>
+                <strong>${a.id}</strong>
+                <span class="ms-auto">${status}</span>
+              </div>
+              <div class="small">${detail}</div>
             </div>
-            <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end">
+            <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end ms-2">
               <button class="btn btn-sm btn-outline-primary" onclick="openEdit(${idx})">Edit</button>
               <button class="btn btn-sm ${hideBtnClass}" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
               <button class="btn btn-sm btn-outline-danger" onclick="deleteAnn(${idx})">Delete</button>

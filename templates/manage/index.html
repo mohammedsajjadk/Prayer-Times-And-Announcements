@@ -3,704 +3,198 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prayer Times Admin</title>
+  <title>Manage — {{ mosque.displayName }}</title>
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
         crossorigin="anonymous">
   <style>
-    body { background: #f5f5f5; }
+    body { background: #f0f2f5; }
     .navbar-brand { font-weight: 700; }
-    .table th { white-space: nowrap; }
+    .hub-card {
+      border: none;
+      border-radius: 12px;
+      transition: transform .15s, box-shadow .15s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .hub-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12); color: inherit; }
+    .hub-card .card-icon { font-size: 2.5rem; line-height: 1; }
+    .hub-card .card-body { padding: 1.5rem; }
+    .hub-card .action-list { font-size: .85rem; color: #555; margin: .5rem 0 1rem; padding-left: 1.1rem; }
+    .hub-card .go-btn { font-size: .85rem; }
+    .token-compact { font-size: .875rem; }
   </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark bg-dark mb-4">
   <div class="container-lg">
-    <span class="navbar-brand">&#128197; Prayer Times Admin</span>
+    <span class="navbar-brand">&#127968; {{ mosque.displayName }}</span>
     <div class="d-flex gap-2">
-      <a href="{{ mosque.announcementsManage }}" class="btn btn-outline-warning btn-sm">&#128226; Announcements</a>
-      <a href="{{ mosque.settingsManage }}" class="btn btn-outline-info btn-sm">&#9881;&#65039; Settings</a>
-      <a href="{{ mosque.manageBase }}logs" class="btn btn-outline-secondary btn-sm" id="logsLink" style="display:none">&#128196; Debug Logs</a>
-      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">&#128065; Live Screen &#8599;</a>
     </div>
   </div>
 </nav>
 
-<div class="container-lg">
+<div class="container-lg" style="max-width:900px">
 
-  <!-- Token card -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <h6 class="card-title mb-3">GitHub Token</h6>
-      <div id="tokenSetSection">
-        <div class="input-group mb-2" style="max-width:520px">
-          <input type="password" id="tokenInput" class="form-control"
-                 placeholder="Paste your GitHub fine-grained token here">
-          <button class="btn btn-primary" onclick="saveToken()">Save</button>
+  <!-- GitHub Token (compact) -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body token-compact py-3">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <span class="fw-semibold">&#128273; GitHub Token</span>
+        <div id="tokenSetSection" class="d-flex align-items-center gap-2 flex-grow-1">
+          <input type="password" id="tokenInput" class="form-control form-control-sm"
+                 style="max-width:340px" placeholder="Paste fine-grained token…">
+          <button class="btn btn-primary btn-sm" onclick="saveToken()">Save</button>
+          <small class="text-muted d-none d-md-inline">
+            Stored only in your browser &mdash;
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">Create &#8599;</a>
+            (needs <em>Contents: Read &amp; write</em>)
+          </small>
         </div>
-        <small class="text-muted">
-          Saved only in <strong>your browser</strong> (localStorage). Never sent to the server.
-          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">
-            Create a token &#8599;
-          </a>
-          &mdash; needs <em>Contents: Read and write</em> on the prayer-times repo.
-        </small>
-      </div>
-      <div id="tokenSavedSection" style="display:none">
-        <span class="text-success fw-semibold">&#10003; Token saved</span>
-        <button class="btn btn-sm btn-outline-danger ms-3" onclick="clearToken()">Clear</button>
+        <div id="tokenSavedSection" style="display:none" class="d-flex align-items-center gap-2">
+          <span class="text-success fw-semibold">&#10003; Token saved</span>
+          <button class="btn btn-sm btn-outline-danger" onclick="clearToken()">Clear</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Status messages -->
-  <div id="statusArea"></div>
-
-  <!-- Toolbar -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Prayer Times</h4>
-    <button class="btn btn-primary" onclick="toggleAddPanel()">&#43; Add Month</button>
+  <!-- Heading -->
+  <div class="mb-4">
+    <h3 class="fw-bold mb-1">What would you like to do?</h3>
+    <p class="text-muted mb-0">Choose a section below to get started.</p>
   </div>
 
-  <!-- Add Month panel -->
-  <div id="addPanel" class="card mb-4 border-primary" style="display:none">
-    <div class="card-header bg-primary text-white"><strong>Add a New Month</strong></div>
-    <div class="card-body">
-      {% if mosque.parserFormat == 'tralee' %}
-      <p class="text-muted mb-2">
-        Open the Excel spreadsheet, select the <strong>entire month table</strong>
-        (including the month name row at the top), copy it, and paste below.
-      </p>
-      {% else %}
-      <p class="text-muted mb-2">
-        Paste the Dublin mosque timetable table (Day/Date/Fajr… columns). Select the month below first.
-      </p>
-      <div class="mb-3" style="max-width:220px">
-        <label class="form-label fw-semibold">Month</label>
-        <select id="dublinMonthSelect" class="form-select">
-          <option value="">— Select month —</option>
-          <option value="1">January</option><option value="2">February</option>
-          <option value="3">March</option><option value="4">April</option>
-          <option value="5">May</option><option value="6">June</option>
-          <option value="7">July</option><option value="8">August</option>
-          <option value="9">September</option><option value="10">October</option>
-          <option value="11">November</option><option value="12">December</option>
-        </select>
-      </div>
-      {% endif %}
-      <textarea id="pasteArea" class="form-control font-monospace mb-3"
-                rows="10" placeholder="Paste here…"></textarea>
-      <button class="btn btn-success me-2" onclick="addMonth()">Parse &amp; Save to GitHub</button>
-      <button class="btn btn-secondary" onclick="toggleAddPanel()">Cancel</button>
+  <!-- Task cards -->
+  <div class="row g-3 row-cols-1 row-cols-md-2 mb-4">
+
+    <!-- Prayer Times -->
+    <div class="col">
+      <a href="{{ mosque.prayerTimesManage }}" class="hub-card card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <span class="card-icon">&#128197;</span>
+            <h5 class="mb-0 fw-semibold">Prayer Times</h5>
+          </div>
+          <ul class="action-list">
+            <li>Add a new month from the Excel spreadsheet</li>
+            <li>Edit any prayer time for a specific day</li>
+            <li>Delete an old month</li>
+          </ul>
+          <span class="btn btn-primary btn-sm go-btn">Go to Prayer Times &#8594;</span>
+        </div>
+      </a>
     </div>
-  </div>
 
-  <!-- Month list -->
-  <div id="monthList">
-    <div class="text-muted">Loading…</div>
+    <!-- Announcements -->
+    <div class="col">
+      <a href="{{ mosque.announcementsManage }}" class="hub-card card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <span class="card-icon">&#128226;</span>
+            <h5 class="mb-0 fw-semibold">Announcements</h5>
+          </div>
+          <ul class="action-list">
+            <li>Add, edit or delete announcements</li>
+            <li>Show or hide an announcement</li>
+            <li>Set date windows or suppress periods</li>
+          </ul>
+          <span class="btn btn-warning btn-sm go-btn">Go to Announcements &#8594;</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Display Settings -->
+    <div class="col">
+      <a href="{{ mosque.settingsManage }}" class="hub-card card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <span class="card-icon">&#9881;&#65039;</span>
+            <h5 class="mb-0 fw-semibold">Display Settings</h5>
+          </div>
+          <ul class="action-list">
+            <li>Change theme / colour scheme</li>
+            <li>Edit prayer column labels</li>
+            <li>Adjust font sizes</li>
+          </ul>
+          <span class="btn btn-info btn-sm go-btn text-dark">Go to Settings &#8594;</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Live Screen -->
+    <div class="col">
+      <a href="{{ mosque.liveSite }}" target="_blank" class="hub-card card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <span class="card-icon">&#128065;</span>
+            <h5 class="mb-0 fw-semibold">View Live Screen</h5>
+          </div>
+          <ul class="action-list">
+            <li>Open the public prayer times display</li>
+            <li>Check how announcements look right now</li>
+            <li>Opens in a new tab &#8599;</li>
+          </ul>
+          <span class="btn btn-secondary btn-sm go-btn">Open Live Screen &#8594;</span>
+        </div>
+      </a>
+    </div>
+
+  </div><!-- /row -->
+
+  <!-- Debug logs (localhost only) -->
+  <div id="logsLink" style="display:none" class="text-center mb-4">
+    <a href="{{ mosque.manageBase }}logs" class="text-muted small">&#128196; Debug Logs</a>
   </div>
 
 </div><!-- /container -->
-
-<!-- ─── Edit Prayer Times Modal ─────────────────────────────────────────── -->
-<div class="modal fade" id="editRowModal" tabindex="-1" aria-labelledby="editRowModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editRowModalLabel">Edit Prayer Times</h5>
-        <button type="button" class="btn-close" onclick="hideEditModal()"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="editRowMonth">
-        <input type="hidden" id="editRowDate">
-        <p class="text-muted small mb-3" id="editRowDesc"></p>
-        <div class="row g-3">
-          <div class="col-12"><h6 class="text-secondary">Beginning Times</h6></div>
-          <div class="col-md-4"><label class="form-label">Fajr Beginning</label>
-            <input type="time" id="edit_fajr_b" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Sunrise</label>
-            <input type="time" id="edit_sunrise" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Zohr Beginning</label>
-            <input type="time" id="edit_zohr_b" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Asar Beginning</label>
-            <input type="time" id="edit_asar_b" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Magrib Beginning</label>
-            <input type="time" id="edit_magrib_b" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Isha Beginning</label>
-            <input type="time" id="edit_isha_b" class="form-control"></div>
-
-          <div class="col-12 mt-2 d-flex justify-content-between align-items-center">
-            <h6 class="text-secondary mb-0">Jamaat Times</h6>
-            {% if mosque.parserFormat == 'dublin' %}
-            <button type="button" class="btn btn-outline-secondary btn-sm"
-                    onclick="autoFillJamaatPlus10()">Auto-fill Jamaat (+10 min)</button>
-            {% endif %}
-          </div>
-          <div class="col-md-4"><label class="form-label">Fajr Jamaat</label>
-            <input type="time" id="edit_fajr_j" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Zohr Jamaat</label>
-            <input type="time" id="edit_zohr_j" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Asar Jamaat</label>
-            <input type="time" id="edit_asar_j" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Magrib Jamaat</label>
-            <input type="time" id="edit_magrib_j" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label">Isha Jamaat</label>
-            <input type="time" id="edit_isha_j" class="form-control"></div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="hideEditModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="saveEditRow()">Save &amp; Commit</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmX3TBQLzT2HyCrFaLMuDFHGpNap"
         crossorigin="anonymous"></script>
 <script>
-// ─── Constants ────────────────────────────────────────────────────────────────
-const REPO    = 'mohammedsajjadk/prayer-times';
-const BRANCH  = 'main';
-const CSV_PATH = '{{ mosque.csvPath }}';
-const PARSER_FORMAT = '{{ mosque.parserFormat }}';
-const API_CSV_URL   = '{{ mosque.apiBase }}api/csv';
-const API     = 'https://api.github.com';
-
-const HEADERS = [
-  'MONTH','DATE',
-  'FAJR BEGINNING','SUNRISE BEGINNING','ZOHR BEGINNING',
-  'ASAR BEGINNING','MAGRIB BEGINNING','ISHA BEGINNING',
-  'FAJR JAMAAH','ZOHR JAMAAH','ASAR JAMAAH','MAGRIB JAMAAH','ISHA JAMAAH'
-];
-
-const MONTH_NAMES = ['','January','February','March','April','May','June',
-  'July','August','September','October','November','December'];
-
-const MONTH_MAP = {
-  JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,
-  JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12
-};
-
 // ─── Token ────────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('gh_token') || ''; }
 
 function saveToken() {
   const t = document.getElementById('tokenInput').value.trim();
-  if (!t) { showStatus('Please paste a token first.', 'warning'); return; }
+  if (!t) return;
   localStorage.setItem('gh_token', t);
   document.getElementById('tokenInput').value = '';
   showTokenState();
-  loadMonths();
 }
 
 function clearToken() {
   localStorage.removeItem('gh_token');
   showTokenState();
-  loadMonths();
 }
 
 function showTokenState() {
   const has = !!getToken();
-  document.getElementById('tokenSetSection').style.display = has ? 'none' : '';
-  document.getElementById('tokenSavedSection').style.display = has ? '' : 'none';
-}
-
-// ─── CSV helpers ──────────────────────────────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  return lines.slice(1)
-    .filter(l => l.trim())
-    .map(l => {
-      const vals = l.split(',');
-      const obj = {};
-      HEADERS.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
-      return obj;
-    });
-}
-
-function rowsToCSV(rows) {
-  const lines = [HEADERS.join(',')];
-  rows.forEach(r => lines.push(HEADERS.map(h => r[h] || '').join(',')));
-  return lines.join('\n') + '\n';
-}
-
-// ─── Fetch current CSV (from GitHub when token available, else local) ─────────
-async function fetchRows() {
-  const token = getToken();
-  if (token) {
-    try {
-      const resp = await fetch(
-        `${API}/repos/${REPO}/contents/${CSV_PATH}?ref=${BRANCH}`,
-        { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
-      );
-      if (resp.ok) {
-        const data = await resp.json();
-        // GitHub returns base64 content with embedded newlines — strip them before decoding
-        const csvText = decodeURIComponent(
-          escape(atob(data.content.replace(/\n/g, '')))
-        );
-        return parseCSV(csvText);
-      }
-    } catch (_) { /* fall through to local */ }
+  const setEl  = document.getElementById('tokenSetSection');
+  const saveEl = document.getElementById('tokenSavedSection');
+  // Both divs have Bootstrap's d-flex class (display:flex!important),
+  // so plain .style.display is overridden. Use setProperty with !important to win.
+  if (has) {
+    setEl.style.setProperty('display', 'none', 'important');
+    saveEl.style.removeProperty('display');
+  } else {
+    setEl.style.removeProperty('display');
+    saveEl.style.setProperty('display', 'none', 'important');
   }
-  // Fallback: read local file via Flask route
-  const res = await fetch(API_CSV_URL);
-  const text = await res.text();
-  return parseCSV(text);
-}
-
-// ─── Auto-prune past months ───────────────────────────────────────────────────
-async function pruneOldMonths(rows) {
-  const now = new Date();
-  const cur = now.getMonth() + 1; // 1-based current month
-  const keep = new Set([cur, (cur % 12) + 1, ((cur + 1) % 12) + 1]);
-  const removed = [...new Set(rows.map(r => parseInt(r['MONTH'])))].filter(m => !keep.has(m));
-  if (!removed.length) return;
-  const removedNames = removed.map(m => MONTH_NAMES[m] || `Month ${m}`).join(', ');
-  const kept = rows.filter(r => keep.has(parseInt(r['MONTH'])));
-  showStatus(`Auto-pruning old months: ${removedNames}…`, 'info');
-  try {
-    await commitCSV(kept, `Auto-prune: removed ${removedNames}`);
-    _allRows = kept;
-    renderMonths(kept);
-    showStatus(`&#10003; Auto-pruned: ${removedNames} removed and committed to GitHub.`, 'success');
-  } catch (e) {
-    showStatus('Auto-prune failed: ' + e.message, 'danger');
-  }
-}
-
-// ─── Render month cards ───────────────────────────────────────────────────────
-async function loadMonths() {
-  document.getElementById('monthList').innerHTML = '<div class="text-muted">Loading…</div>';
-  let rows;
-  try { rows = await fetchRows(); }
-  catch (e) { showStatus('Could not load prayer times: ' + e.message, 'danger'); return; }
-  renderMonths(rows);
-  await pruneOldMonths(rows);
-}
-
-function renderMonths(rows) {
-  _allRows = rows;  // keep in-memory copy for edit operations
-  const container = document.getElementById('monthList');
-  if (!rows.length) {
-    container.innerHTML = '<div class="alert alert-info">No prayer times found. Use <strong>+ Add Month</strong> to get started.</div>';
-    return;
-  }
-
-  const months = {};
-  rows.forEach(r => {
-    const m = parseInt(r['MONTH']);
-    if (!months[m]) months[m] = [];
-    months[m].push(r);
-  });
-
-  const html = Object.keys(months).sort((a, b) => a - b).map(m => {
-    const mRows = months[m];
-    const name = MONTH_NAMES[parseInt(m)] || `Month ${m}`;
-    return `
-      <div class="card mb-3 shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>${name} &mdash; ${mRows.length} days</strong>
-          <button class="btn btn-danger btn-sm"
-                  onclick="deleteMonth(${m}, '${name}')">Delete</button>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-sm table-striped table-hover small mb-0">
-              <thead class="table-dark">
-                <tr>
-                  <th>Date</th>
-                  <th>Fajr B</th><th>Sunrise</th><th>Zohr B</th>
-                  <th>Asar B</th><th>Magrib B</th><th>Isha B</th>
-                  <th>Fajr J</th><th>Zohr J</th><th>Asar J</th>
-                  <th>Magrib J</th><th>Isha J</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                ${mRows.map(r => `
-                  <tr>
-                    <td>${r['DATE']}</td>
-                    <td>${r['FAJR BEGINNING']}</td>
-                    <td>${r['SUNRISE BEGINNING']}</td>
-                    <td>${r['ZOHR BEGINNING']}</td>
-                    <td>${r['ASAR BEGINNING']}</td>
-                    <td>${r['MAGRIB BEGINNING']}</td>
-                    <td>${r['ISHA BEGINNING']}</td>
-                    <td>${r['FAJR JAMAAH']}</td>
-                    <td>${r['ZOHR JAMAAH']}</td>
-                    <td>${r['ASAR JAMAAH']}</td>
-                    <td>${r['MAGRIB JAMAAH']}</td>
-                    <td>${r['ISHA JAMAAH']}</td>
-                    <td><button class="btn btn-outline-secondary btn-sm py-0 px-1"
-                          onclick="editRow(${m}, ${r['DATE']})"
-                          title="Edit">&#9998;</button></td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-
-  container.innerHTML = html;
-}
-
-// ─── Spreadsheet parser (mirrors prayer_time_parser.py) ──────────────────────
-function formatTime(s, isMorning, isAfternoon) {
-  if (!s || s.trim() === '"') return '';
-  s = s.trim();
-  if (s.includes(':')) return s;
-  if (s.includes('.')) {
-    const [hPart, mPart] = s.split('.');
-    let h = parseInt(hPart, 10);
-    const mins = parseInt(mPart, 10);
-    if (isAfternoon && h < 12) h += 12;
-    else if (isMorning && h === 12) h = 0;
-    return `${String(h).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  }
-  return s;
-}
-
-function parsePaste(text) {
-  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  if (!lines.length) throw new Error('Empty input.');
-
-  // Find month from first non-empty line
-  let month = null;
-  for (const line of lines) {
-    const upper = line.toUpperCase();
-    for (const [name, num] of Object.entries(MONTH_MAP)) {
-      if (upper.includes(name)) { month = num; break; }
-    }
-    if (month) break;
-  }
-  if (!month) throw new Error('Could not find a month name (e.g. "AUGUST") in the pasted data.');
-
-  const rows = [];
-  let prevJamaah = null;
-
-  for (let i = 2; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line || line.toUpperCase().startsWith('DATE')) continue;
-
-    // Split by one-or-more tabs OR two-or-more spaces (mirrors Python \t+|\s{2,})
-    const parts = line.split(/\t+| {2,}/);
-    if (parts.length < 13) continue;
-
-    const date = parseInt(parts[0], 10);
-    if (isNaN(date)) continue;
-
-    const fajrB   = formatTime(parts[3], true,  false);
-    const sunB    = formatTime(parts[4], true,  false);
-    const zohrB   = formatTime(parts[5], false, true);
-    const asarB   = formatTime(parts[6], false, true);
-    const magribB = formatTime(parts[7], false, true);
-    const ishaB   = formatTime(parts[8], false, true);
-
-    const jt = (raw, key, mor, aft) => {
-      if (raw && raw.trim() === '"' && prevJamaah) return prevJamaah[key];
-      return formatTime(raw, mor, aft);
-    };
-
-    const fajrJ   = jt(parts[9],          'fajr',   true,  false);
-    const zohrJ   = jt(parts[10],         'zohr',   false, true);
-    const asarJ   = jt(parts[11],         'asar',   false, true);
-    const magribJ = jt(parts[12],         'magrib', false, true);
-    const ishaJ   = jt(parts[13] || '',   'isha',   false, true);
-
-    const row = {
-      'MONTH': String(month), 'DATE': String(date),
-      'FAJR BEGINNING': fajrB, 'SUNRISE BEGINNING': sunB,
-      'ZOHR BEGINNING': zohrB, 'ASAR BEGINNING': asarB,
-      'MAGRIB BEGINNING': magribB, 'ISHA BEGINNING': ishaB,
-      'FAJR JAMAAH': fajrJ, 'ZOHR JAMAAH': zohrJ,
-      'ASAR JAMAAH': asarJ, 'MAGRIB JAMAAH': magribJ,
-      'ISHA JAMAAH': ishaJ,
-    };
-    rows.push(row);
-    prevJamaah = { fajr: fajrJ, zohr: zohrJ, asar: asarJ, magrib: magribJ, isha: ishaJ };
-  }
-
-  if (!rows.length) throw new Error('No data rows found. Make sure you copied the entire table including the month name row.');
-  return rows;
-}
-
-// ─── GitHub commit ────────────────────────────────────────────────────────────
-async function commitCSV(rows, message) {
-  const token = getToken();
-  if (!token) throw new Error('No GitHub token saved. Enter your token above first.');
-
-  const url = `${API}/repos/${REPO}/contents/${CSV_PATH}`;
-  const hdrs = {
-    Authorization: `token ${token}`,
-    Accept: 'application/vnd.github+json',
-  };
-
-  // Fetch current file SHA
-  const getResp = await fetch(`${url}?ref=${BRANCH}`, { headers: hdrs });
-  if (!getResp.ok && getResp.status !== 404) {
-    const e = await getResp.json().catch(() => ({}));
-    throw new Error(`GitHub API error (${getResp.status}): ${e.message || 'unknown'}`);
-  }
-  const sha = getResp.ok ? (await getResp.json()).sha : undefined;
-
-  // Encode CSV as base64 (CSV is ASCII-safe)
-  const content = btoa(unescape(encodeURIComponent(rowsToCSV(rows))));
-  const body = { message, content, branch: BRANCH };
-  if (sha) body.sha = sha;
-
-  const putResp = await fetch(url, {
-    method: 'PUT',
-    headers: { ...hdrs, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!putResp.ok) {
-    const e = await putResp.json().catch(() => ({}));
-    throw new Error(`GitHub commit failed (${putResp.status}): ${e.message || 'unknown'}`);
-  }
-}
-
-// ─── Add month ────────────────────────────────────────────────────────────────
-async function addMonth() {
-  const text = document.getElementById('pasteArea').value;
-  if (!text.trim()) { showStatus('Nothing pasted.', 'warning'); return; }
-
-  let newRows;
-  try {
-    if (PARSER_FORMAT === 'dublin') {
-      const monthSel = document.getElementById('dublinMonthSelect');
-      const month = parseInt(monthSel ? monthSel.value : '', 10);
-      if (!month) { showStatus('Please select a month before parsing.', 'warning'); return; }
-      newRows = parseDublinPaste(text, month);
-    } else {
-      newRows = parsePaste(text);
-    }
-  } catch (e) {
-    showStatus(e.message, 'danger');
-    return;
-  }
-
-  const newMonth = parseInt(newRows[0]['MONTH'], 10);
-
-  showStatus('Loading current data…', 'info');
-  let existing;
-  try { existing = await fetchRows(); }
-  catch (e) { showStatus('Could not load current CSV: ' + e.message, 'danger'); return; }
-
-  if (existing.some(r => parseInt(r['MONTH'], 10) === newMonth)) {
-    showStatus(
-      `${MONTH_NAMES[newMonth]} already exists. Delete it first if you want to replace it.`,
-      'danger'
-    );
-    return;
-  }
-
-  const all = [...existing, ...newRows].sort((a, b) => {
-    const dm = parseInt(a['MONTH'], 10) - parseInt(b['MONTH'], 10);
-    return dm !== 0 ? dm : parseInt(a['DATE'], 10) - parseInt(b['DATE'], 10);
-  });
-
-  showStatus('Committing to GitHub…', 'info');
-  try {
-    await commitCSV(all, `Add ${MONTH_NAMES[newMonth]} prayer times`);
-    showStatus(`&#10003; ${MONTH_NAMES[newMonth]} added — GitHub updated.`, 'success');
-    document.getElementById('pasteArea').value = '';
-    document.getElementById('addPanel').style.display = 'none';
-    loadMonths();
-  } catch (e) {
-    showStatus(e.message, 'danger');
-  }
-}
-
-// ─── Delete month ─────────────────────────────────────────────────────────────
-async function deleteMonth(monthNum, monthName) {
-  if (!confirm(`Delete all days for ${monthName}? This will commit the change to GitHub.`)) return;
-
-  showStatus('Loading current data…', 'info');
-  let existing;
-  try { existing = await fetchRows(); }
-  catch (e) { showStatus('Could not load current CSV: ' + e.message, 'danger'); return; }
-
-  const kept = existing.filter(r => parseInt(r['MONTH'], 10) !== monthNum);
-  if (kept.length === existing.length) {
-    showStatus(`No rows found for ${monthName}.`, 'warning');
-    return;
-  }
-
-  showStatus('Committing to GitHub…', 'info');
-  try {
-    await commitCSV(kept, `Delete ${monthName} prayer times`);
-    showStatus(`&#10003; ${monthName} deleted — GitHub updated.`, 'success');
-    loadMonths();
-  } catch (e) {
-    showStatus(e.message, 'danger');
-  }
-}
-
-// ─── Dublin spreadsheet parser ───────────────────────────────────────────────
-// Mirrors DublinPrayerTimeParser in prayer_time_parser.py
-function normaliseDublinTime(s) {
-  s = s.trim();
-  if (!s || !s.includes(':')) return s;
-  const [h, m] = s.split(':');
-  return String(parseInt(h, 10)).padStart(2, '0') + ':' + m.padStart(2, '0');
-}
-
-function addMinutesToTime(timeStr, mins) {
-  const [h, m] = timeStr.split(':').map(Number);
-  const total = h * 60 + m + mins;
-  return String(Math.floor(total / 60) % 24).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
-}
-
-function parseDublinPaste(text, month) {
-  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const rows = [];
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    // Split on any whitespace (tabs or multiple spaces) — Dublin format uses tabs
-    const parts = line.split(/\t+|\s{2,}|\s+/);
-    // Skip header: first token is non-numeric (e.g. "Day")
-    if (!parts[1] || isNaN(parseInt(parts[1], 10))) continue;
-    if (parts.length < 8) continue;
-    const date = parseInt(parts[1], 10);
-    if (isNaN(date)) continue;
-    const fajrB   = normaliseDublinTime(parts[2]);
-    const sunB    = normaliseDublinTime(parts[3]);
-    const zohrB   = normaliseDublinTime(parts[4]);
-    const asarB   = normaliseDublinTime(parts[5]);
-    const magribB = normaliseDublinTime(parts[6]);
-    const ishaB   = normaliseDublinTime(parts[7]);
-    rows.push({
-      'MONTH': String(month), 'DATE': String(date),
-      'FAJR BEGINNING': fajrB,    'SUNRISE BEGINNING': sunB,
-      'ZOHR BEGINNING': zohrB,    'ASAR BEGINNING': asarB,
-      'MAGRIB BEGINNING': magribB, 'ISHA BEGINNING': ishaB,
-      'FAJR JAMAAH':   addMinutesToTime(fajrB,   10),
-      'ZOHR JAMAAH':   addMinutesToTime(zohrB,   10),
-      'ASAR JAMAAH':   addMinutesToTime(asarB,   10),
-      'MAGRIB JAMAAH': addMinutesToTime(magribB, 10),
-      'ISHA JAMAAH':   addMinutesToTime(ishaB,   10),
-    });
-  }
-  if (!rows.length) throw new Error('No data rows found. Make sure the table is pasted with correct columns.');
-  return rows;
-}
-
-// ─── Vanilla modal helpers ───────────────────────────────────────────────────
-function showEditModal() {
-  var modal = document.getElementById('editRowModal');
-  modal.style.display = 'block';
-  modal.classList.add('show');
-  document.body.classList.add('modal-open');
-  var backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop fade show';
-  backdrop.id = 'editModalBackdrop';
-  document.body.appendChild(backdrop);
-}
-function hideEditModal() {
-  var modal = document.getElementById('editRowModal');
-  modal.style.display = 'none';
-  modal.classList.remove('show');
-  document.body.classList.remove('modal-open');
-  var backdrop = document.getElementById('editModalBackdrop');
-  if (backdrop) backdrop.remove();
-}
-
-// ─── Edit row (in-place) ──────────────────────────────────────────────────────
-var _allRows = [];  // in-memory copy, populated by loadMonths → renderMonths
-
-function editRow(monthNum, dateNum) {
-  const r = _allRows.find(x => parseInt(x['MONTH'],10) === monthNum && parseInt(x['DATE'],10) === dateNum);
-  if (!r) { showStatus('Row not found.', 'warning'); return; }
-  document.getElementById('editRowMonth').value = monthNum;
-  document.getElementById('editRowDate').value  = dateNum;
-  document.getElementById('editRowDesc').textContent =
-    `${MONTH_NAMES[monthNum]} ${dateNum}`;
-  document.getElementById('edit_fajr_b').value   = r['FAJR BEGINNING']    || '';
-  document.getElementById('edit_sunrise').value  = r['SUNRISE BEGINNING'] || '';
-  document.getElementById('edit_zohr_b').value   = r['ZOHR BEGINNING']    || '';
-  document.getElementById('edit_asar_b').value   = r['ASAR BEGINNING']    || '';
-  document.getElementById('edit_magrib_b').value = r['MAGRIB BEGINNING']  || '';
-  document.getElementById('edit_isha_b').value   = r['ISHA BEGINNING']    || '';
-  document.getElementById('edit_fajr_j').value   = r['FAJR JAMAAH']       || '';
-  document.getElementById('edit_zohr_j').value   = r['ZOHR JAMAAH']       || '';
-  document.getElementById('edit_asar_j').value   = r['ASAR JAMAAH']       || '';
-  document.getElementById('edit_magrib_j').value = r['MAGRIB JAMAAH']     || '';
-  document.getElementById('edit_isha_j').value   = r['ISHA JAMAAH']       || '';
-  showEditModal();
-}
-
-function autoFillJamaatPlus10() {
-  const fields = ['fajr','zohr','asar','magrib','isha'];
-  fields.forEach(p => {
-    const bVal = document.getElementById('edit_' + p + '_b').value;
-    if (bVal) document.getElementById('edit_' + p + '_j').value = addMinutesToTime(bVal, 10);
-  });
-}
-
-async function saveEditRow() {
-  const monthNum = parseInt(document.getElementById('editRowMonth').value, 10);
-  const dateNum  = parseInt(document.getElementById('editRowDate').value,  10);
-  const idx = _allRows.findIndex(x => parseInt(x['MONTH'],10) === monthNum && parseInt(x['DATE'],10) === dateNum);
-  if (idx === -1) { showStatus('Row not found.', 'danger'); return; }
-
-  _allRows[idx] = {
-    ..._allRows[idx],
-    'FAJR BEGINNING':    document.getElementById('edit_fajr_b').value,
-    'SUNRISE BEGINNING': document.getElementById('edit_sunrise').value,
-    'ZOHR BEGINNING':    document.getElementById('edit_zohr_b').value,
-    'ASAR BEGINNING':    document.getElementById('edit_asar_b').value,
-    'MAGRIB BEGINNING':  document.getElementById('edit_magrib_b').value,
-    'ISHA BEGINNING':    document.getElementById('edit_isha_b').value,
-    'FAJR JAMAAH':       document.getElementById('edit_fajr_j').value,
-    'ZOHR JAMAAH':       document.getElementById('edit_zohr_j').value,
-    'ASAR JAMAAH':       document.getElementById('edit_asar_j').value,
-    'MAGRIB JAMAAH':     document.getElementById('edit_magrib_j').value,
-    'ISHA JAMAAH':       document.getElementById('edit_isha_j').value,
-  };
-
-  hideEditModal();
-  showStatus('Committing to GitHub…', 'info');
-  try {
-    await commitCSV(_allRows, `Update prayer times: ${MONTH_NAMES[monthNum]} ${dateNum}`);
-    showStatus(`&#10003; ${MONTH_NAMES[monthNum]} ${dateNum} updated — GitHub committed.`, 'success');
-    renderMonths(_allRows);
-  } catch (e) {
-    showStatus(e.message, 'danger');
-  }
-}
-
-// ─── UI helpers ───────────────────────────────────────────────────────────────
-function showStatus(msg, type) {
-  const area = document.getElementById('statusArea');
-  area.innerHTML = `
-    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-      ${msg}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>`;
-  area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function toggleAddPanel() {
-  const p = document.getElementById('addPanel');
-  p.style.display = p.style.display === 'none' ? '' : 'none';
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 showTokenState();
-loadMonths();
 
 // Show Debug Logs link only on localhost
 if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-  var logsLink = document.getElementById('logsLink');
-  if (logsLink) logsLink.style.display = '';
+  document.getElementById('logsLink').style.display = '';
 }
 </script>
 </body>

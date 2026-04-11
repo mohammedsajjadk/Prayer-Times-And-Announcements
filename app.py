@@ -21,6 +21,7 @@ MOSQUE_CONFIGS = {
         'manageBase': '/manage/',
         'announcementsManage': '/manage/announcements/',
         'settingsManage': '/manage/settings/',
+        'prayerTimesManage': '/manage/prayer-times/',
         'apiBase': '/',
         'liveSite': '/',
     },
@@ -35,6 +36,7 @@ MOSQUE_CONFIGS = {
         'manageBase': '/dublin/manage/',
         'announcementsManage': '/dublin/manage/announcements/',
         'settingsManage': '/dublin/manage/settings/',
+        'prayerTimesManage': '/dublin/manage/prayer-times/',
         'apiBase': '/dublin/',
         'liveSite': '/dublin',
     },
@@ -263,6 +265,11 @@ def manage_announcements():
     return render_template('manage/announcements.html', mosque=MOSQUE_CONFIGS['tralee'])
 
 
+@app.route('/manage/prayer-times/')
+def manage_prayer_times():
+    return render_template('manage/prayer_times.html', mosque=MOSQUE_CONFIGS['tralee'])
+
+
 @app.route('/manage/settings/')
 def manage_settings():
     return render_template('manage/settings.html', mosque=MOSQUE_CONFIGS['tralee'])
@@ -314,6 +321,11 @@ def dublin_manage_logs():
 @app.route('/dublin/manage/announcements/')
 def dublin_manage_announcements():
     return render_template('manage/announcements.html', mosque=MOSQUE_CONFIGS['dublin'])
+
+
+@app.route('/dublin/manage/prayer-times/')
+def dublin_manage_prayer_times():
+    return render_template('manage/prayer_times.html', mosque=MOSQUE_CONFIGS['dublin'])
 
 
 @app.route('/dublin/manage/settings/')

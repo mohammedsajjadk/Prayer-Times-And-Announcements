@@ -33,10 +33,9 @@
 
 <nav class="navbar navbar-dark bg-dark mb-4">
   <div class="container-lg">
-    <span class="navbar-brand">&#128196; Debug Logs — {{ mosque.displayName }}</span>
+    <a class="navbar-brand text-decoration-none text-white" href="{{ mosque.manageBase }}">&#8592; Dashboard</a>
     <div class="d-flex gap-2">
-      <a href="{{ mosque.manageBase }}" class="btn btn-outline-light btn-sm">&#8592; Admin</a>
-      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live Site &#8599;</a>
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live &#8599;</a>
     </div>
   </div>
 </nav>
