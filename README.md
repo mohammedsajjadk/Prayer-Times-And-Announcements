@@ -1,4 +1,4 @@
-# Prayer Times Display App
+# Prayer Times & Announcements Display App
 
 Full-screen digital prayer times board for a mosque with live announcements, an automated post-Jamaah Adhkar poster, 20 colour themes, and a browser-based management console.
 

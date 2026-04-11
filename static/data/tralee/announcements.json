@@ -155,8 +155,6 @@
   },
   {
     "id": "wifi_receiver",
-    "startDate": "2026-04-02T09:00:00+01:00",
-    "endDate": "2026-04-08T23:59:00+01:00",
     "type": "image",
     "displayCondition": {
       "frequency": 1,
@@ -168,6 +166,16 @@
     "images": [
       "/static/images/wifireceiver.jpg"
     ],
-    "isSpecial": true
+    "isSpecial": true,
+    "scheduleWindows": [
+      {
+        "start": "2026-04-02T09:00:00+01:00",
+        "end": "2026-04-08T23:59:00+01:00"
+      },
+      {
+        "start": "2026-04-10T04:00:00+01:00",
+        "end": "2026-04-12T23:59:00+01:00"
+      }
+    ]
   }
 ]

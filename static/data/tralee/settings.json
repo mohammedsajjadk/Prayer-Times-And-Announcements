@@ -71,7 +71,7 @@
     "fridayZohrSummer": "14:08",
     "fridayZohrWinter": "13:42",
     "fridayZohrWindowMinutes": 4,
-    "fridayZohrPoster1Seconds": 150,
+    "fridayZohrPoster1Seconds": 200,
     "prayers": {
       "fajr": {
         "delayAfterJamaah": 8,
@@ -80,12 +80,12 @@
       },
       "zohr": {
         "delayAfterJamaah": 8,
-        "displayWindowMinutes": 4,
+        "displayWindowMinutes": 3,
         "poster1Seconds": 150
       },
       "asr": {
         "delayAfterJamaah": 8,
-        "displayWindowMinutes": 4,
+        "displayWindowMinutes": 3,
         "poster1Seconds": 150
       },
       "magrib": {
@@ -95,7 +95,7 @@
       },
       "isha": {
         "delayAfterJamaah": 8,
-        "displayWindowMinutes": 4,
+        "displayWindowMinutes": 3,
         "poster1Seconds": 150
       }
     }
