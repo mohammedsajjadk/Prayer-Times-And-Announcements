@@ -102,21 +102,55 @@ Use this prompt template to ask ChatGPT to generate the announcement image:
 **Generic template:**
 
 ```
-Create a professional Islamic announcement poster.
+- Create a professional Islamic event poster in image format
 
-Event: [Event Name]
-Date: [Day, Date Month]
-Time: [Time]
-Venue: [Venue Name]
+- Event:
+  [EVENT NAME]
 
-Style:
-- Clean, elegant Islamic style with geometric patterns or calligraphy border
-- Colour palette: [e.g. deep green and gold / dark blue and white]
-- Include a subtle mosque silhouette or crescent moon
-- Bold title text at the top
-- White or cream background
-- All text must be clearly readable
-- No stock photo faces
+- Title:
+  [TITLE / THEME]
+
+- Details:
+  Date: [DAY, DATE]
+  Womens Time: [TIME]
+  Mens Time: [TIME]
+  Venue: [MASJID / LOCATION NAME]
+  [ADDITIONAL LOCATION LINE IF NEEDED]
+
+- Style:
+  - Mature, elegant, and modern (NOT childish)
+  - No bright playful colors
+  - No cartoon style
+  - No human or living creature figures
+  - Clean and minimal design
+
+- Theme:
+  - Subtle theme of [THEME IDEA – e.g. growth, knowledge, unity, family, spirituality]
+  - Use refined elements like [e.g. books, calligraphy, abstract learning symbols]
+  - Avoid toys or childish graphics
+  - Optional: soft Islamic geometric patterns or mosque silhouette in background
+
+- Colors:
+  - Sophisticated palette (e.g. navy blue, beige, gold, charcoal, off-white)
+  - Soft gradients or lightly textured background
+  - High contrast for readability
+
+- Typography:
+  - Title "[TITLE]" should be the BIGGEST
+  - Event name "[EVENT NAME]" should be bold and prominent at top
+  - Date should be very large (second biggest)
+  - Time details also large and clear
+  - Venue slightly smaller but readable
+  - Use elegant, modern fonts (no playful fonts)
+
+- Layout:
+  - Structured sections with good spacing
+  - Centered composition
+  - Clean dividers or subtle lines between sections
+
+- Output:
+  - High-resolution, print-ready poster
+  - All text sharp and clearly readable
 ```
 
 ---

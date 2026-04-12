@@ -117,21 +117,55 @@ Use this prompt template to ask ChatGPT to generate the announcement image:
 **Generic template:**
 
 ```
-Create a professional Islamic announcement poster.
+- Create a professional Islamic event poster in image format
 
-Event: [Event Name]
-Date: [Day, Date Month]
-Time: [Time]
-Venue: [Venue Name]
+- Event:
+  [EVENT NAME]
 
-Style:
-- Clean, elegant Islamic style with geometric patterns or calligraphy border
-- Colour palette: [e.g. deep green and gold / dark blue and white]
-- Include a subtle mosque silhouette or crescent moon
-- Bold title text at the top
-- White or cream background
-- All text must be clearly readable
-- No stock photo faces
+- Title:
+  [TITLE / THEME]
+
+- Details:
+  Date: [DAY, DATE]
+  Womens Time: [TIME]
+  Mens Time: [TIME]
+  Venue: [MASJID / LOCATION NAME]
+  [ADDITIONAL LOCATION LINE IF NEEDED]
+
+- Style:
+  - Mature, elegant, and modern (NOT childish)
+  - No bright playful colors
+  - No cartoon style
+  - No human or living creature figures
+  - Clean and minimal design
+
+- Theme:
+  - Subtle theme of [THEME IDEA – e.g. growth, knowledge, unity, family, spirituality]
+  - Use refined elements like [e.g. books, calligraphy, abstract learning symbols]
+  - Avoid toys or childish graphics
+  - Optional: soft Islamic geometric patterns or mosque silhouette in background
+
+- Colors:
+  - Sophisticated palette (e.g. navy blue, beige, gold, charcoal, off-white)
+  - Soft gradients or lightly textured background
+  - High contrast for readability
+
+- Typography:
+  - Title "[TITLE]" should be the BIGGEST
+  - Event name "[EVENT NAME]" should be bold and prominent at top
+  - Date should be very large (second biggest)
+  - Time details also large and clear
+  - Venue slightly smaller but readable
+  - Use elegant, modern fonts (no playful fonts)
+
+- Layout:
+  - Structured sections with good spacing
+  - Centered composition
+  - Clean dividers or subtle lines between sections
+
+- Output:
+  - High-resolution, print-ready poster
+  - All text sharp and clearly readable
 ```
 
 ---
@@ -139,19 +173,54 @@ Style:
 **Example — Ramadan Farewell:**
 
 ```
-Create a professional Islamic announcement poster.
+Create a professional Islamic event poster in image format.
 
-Event: Bidding Farewell to Ramadhan
-Date: Thursday, 19th March
-Time: After Asar — 5:45pm
-Venue: TRALEE MASJID / KERRY ISLAMIC CULTURAL CENTRE
+Event:
+Monthly Bayaan Programme
+
+Title:
+Together We Thrive: Parents and Children
+
+Details:
+Date: Sunday 26 April 2026
+Womens Time: After Zohr 2:45 PM
+Mens Time: After Asar 7:45 PM
+Venue: Tralee Masjid
+Kerry Islamic Cultural Centre
 
 Style:
-- Elegant crescent moon and star motif
-- Rich purple and gold colour palette
-- Flowing Arabic calligraphy border (decorative only)
-- Bold white title text
-- Subtitle: "Join us as we bid farewell to the blessed month"
+- Mature, elegant, and modern (NOT childish)
+- No bright playful colors, no cartoon style
+- No human or living creature figures
+- Clean and minimal design
+
+Theme:
+- Subtle “growth, learning, and family development” theme
+- Use refined elements like books, subtle school items, or abstract learning symbols
+- Avoid toys or childish graphics
+- Optional: soft Islamic geometric patterns or mosque silhouette in background
+
+Colors:
+- Sophisticated palette (navy blue, beige, gold, charcoal, off-white)
+- Soft gradients or textured background
+- High contrast for readability
+
+Typography:
+- Title "Together We Thrive: Parents and Children" should be the BIGGEST
+- Event name "Monthly Bayaan Programme" should be bold and prominent at top
+- Date should be very large (second biggest)
+- Time details also large and clear
+- Venue slightly smaller but readable
+- Use elegant, modern fonts (no playful fonts)
+
+Layout:
+- Structured sections with spacing
+- Centered composition
+- Clean dividers or subtle lines between sections
+
+Output:
+- High-resolution, print-ready poster
+- All text sharp and clearly readable
 ```
 
 ---
