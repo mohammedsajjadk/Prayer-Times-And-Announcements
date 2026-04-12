@@ -18,11 +18,15 @@
     "hide": false
   },
   {
-    "id": "clocks_forward_2025",
-    "startDate": "2027-03-26T20:00:00+01:00",
-    "endDate": "2026-03-28T00:00:00+01:00",
+    "id": "clocks_forward_rolling_notice",
     "message": "REMEMBER CLOCKS GO FORWARD 1 HOUR THIS SUNDAY",
-    "isSpecial": true
+    "isSpecial": true,
+    "scheduleWindows": [
+      {
+        "start": "2027-03-26T20:00:00+01:00",
+        "end": "2026-03-28T00:00:00+01:00"
+      }
+    ]
   },
   {
     "id": "clocks_backward_2025",
