@@ -29,11 +29,15 @@
     ]
   },
   {
-    "id": "clocks_backward_2025",
-    "startDate": "2026-10-23T01:00:00+01:00",
-    "endDate": "2026-10-24T23:59:00+01:00",
+    "id": "clocks_backward_rolling_notice",
     "message": "REMEMBER CLOCKS GO BACKWARD 1 HOUR THIS SUNDAY",
-    "isSpecial": true
+    "isSpecial": true,
+    "scheduleWindows": [
+      {
+        "start": "2026-10-23T01:00:00+01:00",
+        "end": "2026-10-24T23:59:00+01:00"
+      }
+    ]
   },
   {
     "id": "tafseer_friday_recurring",
