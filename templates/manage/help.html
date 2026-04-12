@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help — {{ mosque.displayName }}</title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous">
+  <style>
+    body { background: #f5f5f5; }
+    .navbar-brand { font-weight: 700; }
+
+    /* Sticky sidebar */
+    #helpSidebar {
+      position: sticky;
+      top: 1rem;
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+    }
+    #helpSidebar .nav-link {
+      font-size: .875rem;
+      padding: .25rem .75rem;
+      color: #495057;
+      border-left: 3px solid transparent;
+    }
+    #helpSidebar .nav-link:hover,
+    #helpSidebar .nav-link.active {
+      color: #0d6efd;
+      border-left-color: #0d6efd;
+      background: transparent;
+    }
+
+    /* Content */
+    .help-section { scroll-margin-top: 1.5rem; }
+    .help-section + .help-section { margin-top: 2rem; }
+    .help-section h2 { font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid #dee2e6; padding-bottom: .4rem; }
+    .help-section h3 { font-size: 1rem; font-weight: 600; margin-top: 1.25rem; }
+    .step-badge {
+      display: inline-block;
+      min-width: 1.6rem;
+      height: 1.6rem;
+      line-height: 1.6rem;
+      text-align: center;
+      border-radius: 50%;
+      background: #0d6efd;
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 700;
+      margin-right: .4rem;
+      flex-shrink: 0;
+    }
+    .step { display: flex; align-items: flex-start; gap: .1rem; margin-bottom: .5rem; }
+    .step-body { flex: 1; }
+    pre.spreadsheet {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-size: .78rem;
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    pre.prompt-block {
+      background: #0d1117;
+      color: #c9d1d9;
+      font-size: .8rem;
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .copy-btn { font-size: .75rem; padding: .15rem .5rem; }
+
+    /* Status badges */
+    .badge-pill { border-radius: 50rem; font-size: .78rem; padding: .3rem .7rem; }
+
+    /* Back-to-top */
+    #backToTop {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container-lg">
+    <a class="navbar-brand text-decoration-none text-white" href="{{ mosque.manageBase }}">&#8592; Dashboard</a>
+    <div class="d-flex gap-2">
+      <a href="{{ mosque.liveSite }}" class="btn btn-outline-light btn-sm" target="_blank">View Live &#8599;</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-lg pb-5">
+  <div class="row g-4">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+    <div class="col-lg-3 d-none d-lg-block">
+      <nav id="helpSidebar" class="nav flex-column">
+        <span class="fw-bold text-muted small text-uppercase px-3 mb-1">Guide</span>
+        {% if mosque.parserFormat == 'tralee' %}
+        <a class="nav-link" href="#sec-prayer-times">1. Update Prayer Times</a>
+        {% else %}
+        <a class="nav-link" href="#sec-prayer-times">1. Update Prayer Times</a>
+        {% endif %}
+        <a class="nav-link" href="#sec-fix-time">2. Fix a Wrong Time</a>
+        <a class="nav-link" href="#sec-text-ann">3. Add a Text Announcement</a>
+        <a class="nav-link" href="#sec-image-ann">4. Add an Image Poster</a>
+        <a class="nav-link" href="#sec-suppress">5. Suppress a Recurring Event</a>
+        <a class="nav-link" href="#sec-hide">6. Hide an Announcement</a>
+        {% if mosque.parserFormat == 'tralee' %}
+        <a class="nav-link" href="#sec-jumuah">7. Change Jumu&#8216;ah Time</a>
+        <a class="nav-link" href="#sec-theme">8. Change Display Theme</a>
+        <a class="nav-link" href="#sec-adhkar">9. Adhkar Timings</a>
+        <a class="nav-link" href="#sec-badges">10. Status Badges</a>
+        <a class="nav-link" href="#sec-token">11. GitHub Token</a>
+        {% else %}
+        <a class="nav-link" href="#sec-theme">7. Change Display Theme</a>
+        <a class="nav-link" href="#sec-adhkar">8. Adhkar Timings</a>
+        <a class="nav-link" href="#sec-badges">9. Status Badges</a>
+        <a class="nav-link" href="#sec-token">10. GitHub Token</a>
+        {% endif %}
+      </nav>
+    </div>
+
+    <!-- ── Content ─────────────────────────────────────────────────────────── -->
+    <div class="col-lg-9">
+
+      <h1 class="h4 mb-1">📖 Step-by-step Guide</h1>
+      <p class="text-muted mb-4">{{ mosque.displayName }}</p>
+
+      <!-- ── 1. Update Prayer Times ───────────────────────────────────────── -->
+      <section class="help-section" id="sec-prayer-times">
+        <h2>1. Update Prayer Times for a New Month</h2>
+
+        {% if mosque.parserFormat == 'tralee' %}
+
+        <p>Prayer times come from the Imam as an Excel spreadsheet. Open the file, click the tab for the month (e.g. <strong>JUNE</strong>), and follow the steps below.</p>
+
+        <h3>Expected spreadsheet layout</h3>
+        <p>The parser expects <strong>exactly</strong> this structure:</p>
+        <div class="position-relative mb-3">
+          <pre class="spreadsheet" id="pre-tralee-table">JUNE		ISLAMIC 	BEGINNING TIMES...
+DATE	DAY	HIJRI	FAJR	SUNRISE	ZOHR	ASAR	MAGRIB	ISHA		FAJR	ZOHR	ASAR	MAGRIB	ISHA
+1	Mon	15 D.Hijjah	03:04	05:23	13:37	19:12	21:53	23:13		4.45	2.00	8.15	9.58	11.25
+2	Tue	16	03:04	05:22	13:37	19:12	21:54	23:14		"	"	"	9.59	"
+3	Wed	17	03:04	05:22	13:37	19:13	21:55	23:14		"	"	"	10.00	"
+...
+30	Sun	15 Muharram	03:46	05:54	13:34	19:02	22:18	23:43		"	"	"	10.00	"</pre>
+          <button class="btn btn-outline-secondary btn-sm copy-btn position-absolute top-0 end-0 m-2"
+                  onclick="copyPre('pre-tralee-table', this)">Copy</button>
+        </div>
+
+        <div class="alert alert-info py-2 mb-3">
+          <strong>Key rules:</strong>
+          <ul class="mb-0 mt-1">
+            <li><strong>Row 1</strong> — the month name (<code>JUNE</code>) <em>must</em> be in the first cell; the parser uses it to identify the month.</li>
+            <li><strong>Row 2</strong> — column headers; must be present.</li>
+            <li><strong><code>"</code> (quote symbol)</strong> — means "same Jamaah time as the row above"; the parser fills these in automatically.</li>
+            <li><strong>Decimal afternoon times</strong> — Jamaah times are written as H.MM decimal:
+              <code>4.45</code> → 16:45 &nbsp;|&nbsp; <code>2.00</code> → 14:00 &nbsp;|&nbsp;
+              <code>8.15</code> → 20:15 &nbsp;|&nbsp; <code>9.58</code> → 21:58
+            </li>
+            <li>Early morning times (e.g. Fajr Jamaah <code>4.45</code> before sunrise) are kept as 04:45.</li>
+          </ul>
+        </div>
+
+        {% else %}
+
+        <p>Prayer times come as a tab-separated table. The parser auto-calculates Iqamah as <strong>Adhan + 10 minutes</strong> for every prayer.</p>
+
+        <h3>Expected table layout</h3>
+        <div class="position-relative mb-3">
+          <pre class="spreadsheet" id="pre-dublin-table">Day	Date	Fajr	Sunrise	Dhuhr	Asr	Maghrib	Isha	Iqama + 10 min
+Wed	1	5:19	6:58	13:31	17:02	20:01	21:33	
+Thu	2	5:17	6:55	13:31	17:03	20:03	21:35	
+Fri	3	5:14	6:53	13:31	17:04	20:04	21:37	
+…								
+Thu	30	4:05	5:51	13:24	17:27	20:53	22:32	
+...</pre>
+          <button class="btn btn-outline-secondary btn-sm copy-btn position-absolute top-0 end-0 m-2"
+                  onclick="copyPre('pre-dublin-table', this)">Copy</button>
+        </div>
+
+        <div class="alert alert-info py-2 mb-3">
+          <strong>Key rules:</strong>
+          <ul class="mb-0 mt-1">
+            <li><strong>No month name row needed</strong> — select the month from the dropdown before parsing.</li>
+            <li>Times use 24-hour <code>HH:MM</code> format. No decimal times.</li>
+            <li>Iqamah = Adhan + 10 min, calculated automatically for every prayer.</li>
+          </ul>
+        </div>
+
+        {% endif %}
+
+        <h3>Steps</h3>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">
+          {% if mosque.parserFormat == 'tralee' %}
+          In Excel, click on the cell containing the month name (<strong>JUNE</strong>), then select down to the last day and across to the last Jamaah column. Copy (<kbd>Ctrl+C</kbd>).
+          {% else %}
+          Copy the month's data from the source spreadsheet — include the header row down through the last day. Copy (<kbd>Ctrl+C</kbd>).
+          {% endif %}
+        </div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">
+          Open <a href="{{ mosque.prayerTimesManage }}">Prayer Times</a> and click <strong>+ Add Month</strong> to open the upload panel.
+          {% if mosque.parserFormat == 'dublin' %}Select the <strong>month</strong> from the dropdown.{% endif %}
+          Paste (<kbd>Ctrl+V</kbd>) the copied data into the text area.
+        </div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Click <strong>Parse &amp; Save to GitHub</strong>. This parses the pasted data and commits it in one step. A green toast confirms success. The live display picks up the new times within a few minutes.</div></div>
+      </section>
+
+      <!-- ── 2. Fix a Wrong Time ──────────────────────────────────────────── -->
+      <section class="help-section" id="sec-fix-time">
+        <h2>2. Update Prayer Time for a Specific Day or Fix a Wrong Prayer Time</h2>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.prayerTimesManage }}">Prayer Times</a> and find the row for the day to edit.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Click the <strong>✎ (pencil)</strong> button on the row — this opens the <strong>Edit Prayer Times</strong> modal.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Update the time(s) in the modal. Format: <code>HH:MM</code> (e.g. <code>19:45</code>).</div></div>
+        <div class="step"><span class="step-badge">4</span><div class="step-body">Click <strong>Save &amp; Commit</strong> in the modal footer — saves and commits to GitHub in one step.</div></div>
+      </section>
+
+      <!-- ── 3. Add a Text Announcement ──────────────────────────────────── -->
+      <section class="help-section" id="sec-text-ann">
+        <h2>3. Add a Text Announcement</h2>
+        <p>Use text announcements for notices like: <em>"Eid prayer: Saturday 7:00am — arrive early"</em> or <em>"Weekly lecture: Every Tuesday after Isha."</em></p>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.announcementsManage }}">Announcements</a> and click <strong>+ Text</strong> to expand the Add Text panel.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Fill in the form:</div></div>
+        <table class="table table-sm table-bordered mb-3">
+          <thead class="table-light"><tr><th>Field</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><strong>ID</strong></td><td>A unique identifier with no spaces, e.g. <code>eid_dinner_2027</code>.</td></tr>
+            <tr><td><strong>Message</strong></td><td>The text shown on the display screen.</td></tr>
+            <tr><td><strong>Schedule Windows</strong></td><td><em>Required.</em> Set Start date/time &rarr; End date/time for when the announcement is active. Click <strong>+ Add Window</strong> to add more (max 5).</td></tr>
+            <tr><td><strong>Special announcement</strong></td><td>Check this for high-priority notices.</td></tr>
+          </tbody>
+        </table>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Click <strong>Save to GitHub</strong>.</div></div>
+      </section>
+
+      <!-- ── 4. Add an Image Poster ───────────────────────────────────────── -->
+      <section class="help-section" id="sec-image-ann">
+        <h2>4. Add an Image Poster</h2>
+        <p>Use image posters for event flyers, holiday greetings, or lecture posters.</p>
+
+        <h3>Generate the image with ChatGPT</h3>
+        <p>Use this template to prompt ChatGPT Image (or DALL-E / Sora):</p>
+
+        <div class="position-relative mb-3">
+          <pre class="prompt-block" id="pre-prompt-generic">Create a professional Islamic announcement poster.
+
+Event: [Event Name]
+Date: [Day, Date Month]
+Time: [Time]
+Venue: [Venue Name]
+
+Style:
+- Clean, elegant Islamic style with geometric patterns or calligraphy border
+- Colour palette: [e.g. deep green and gold / dark blue and white]
+- Include a subtle mosque silhouette or crescent moon
+- Bold title text at the top
+- White or cream background
+- All text must be clearly readable
+- No stock photo faces</pre>
+          <button class="btn btn-outline-secondary btn-sm copy-btn position-absolute top-0 end-0 m-2"
+                  onclick="copyPre('pre-prompt-generic', this)">Copy</button>
+        </div>
+
+        {% if mosque.parserFormat == 'tralee' %}
+        <h3>Example — Ramadan Farewell</h3>
+        <div class="position-relative mb-3">
+          <pre class="prompt-block" id="pre-prompt-ramadan">Create a professional Islamic announcement poster.
+
+Event: Bidding Farewell to Ramadhan
+Date: Thursday, 19th March
+Time: After Asar — 5:45pm
+Venue: TRALEE MASJID / KERRY ISLAMIC CULTURAL CENTRE
+
+Style:
+- Elegant crescent moon and star motif
+- Rich purple and gold colour palette
+- Flowing Arabic calligraphy border (decorative only)
+- Bold white title text
+- Subtitle: "Join us as we bid farewell to the blessed month"</pre>
+          <button class="btn btn-outline-secondary btn-sm copy-btn position-absolute top-0 end-0 m-2"
+                  onclick="copyPre('pre-prompt-ramadan', this)">Copy</button>
+        </div>
+        {% endif %}
+
+        <h3>Upload the image</h3>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Save the generated image to your computer (right-click → Save image).</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Open <a href="{{ mosque.announcementsManage }}">Announcements</a> and click <strong>+ Image</strong> to expand the Add Image panel.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Fill in the form:</div></div>
+        <table class="table table-sm table-bordered mb-3">
+          <thead class="table-light"><tr><th>Field</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><strong>ID</strong></td><td>A unique identifier, e.g. <code>ramadan_poster_2027</code>.</td></tr>
+            <tr><td><strong>Image file</strong></td><td>Select a JPG or PNG &mdash; it will be uploaded to the GitHub repo.</td></tr>
+            <tr><td><strong>Schedule Windows</strong></td><td><em>Required.</em> Start date/time &rarr; End date/time for when the poster shows. Click <strong>+ Add Window</strong> for more (max 5).</td></tr>
+            <tr><td><strong>Frequency (minutes)</strong></td><td>How often the poster appears in the rotation.</td></tr>
+            <tr><td><strong>Duration (seconds)</strong></td><td>How long it stays on screen each time.</td></tr>
+            <tr><td><strong>Special</strong></td><td>Check for high-priority posters.</td></tr>
+            <tr><td><strong>Avoid Jamaah times</strong></td><td>Check to skip showing near prayer times.</td></tr>
+          </tbody>
+        </table>
+        <div class="step"><span class="step-badge">4</span><div class="step-body">Click <strong>Upload &amp; Save to GitHub</strong> &mdash; image uploads to GitHub first, then the announcement is saved. A green toast confirms success.</div></div>
+      </section>
+
+      <!-- ── 5. Suppress periods ──────────────────────────────────────────── -->
+      <section class="help-section" id="sec-suppress">
+        <h2>5. Cancel a Recurring Event Temporarily</h2>
+        <p>If a regular class (e.g. <em>Quran class every Tuesday</em>) is cancelled for specific dates, use a Suppress Period instead of deleting the announcement.</p>
+        <div class="alert alert-warning py-2 mb-3"><strong>Note:</strong> Suppress periods are only available on <strong>recurring</strong> and <strong>control</strong> type announcements.</div>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.announcementsManage }}">Announcements</a> and find the recurring announcement.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Click <strong>Edit</strong>.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">In the edit modal, scroll to <strong>Suppress periods</strong> &rarr; click <strong>+ Add Suppress Period</strong>.</div></div>
+        <div class="step"><span class="step-badge">4</span><div class="step-body">Set the Start date/time and End date/time of the cancelled window.</div></div>
+        <div class="step"><span class="step-badge">5</span><div class="step-body">Click <strong>Save to GitHub</strong> in the modal footer.</div></div>
+        <p class="text-muted small">The announcement disappears during the suppress window, then resumes automatically. The <span class="badge bg-warning text-dark">Suppressed now</span> badge shows while it is suppressed.</p>
+      </section>
+
+      <!-- ── 6. Hide ──────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-hide">
+        <h2>6. Hide an Announcement Immediately</h2>
+        <p>To remove an announcement from the display without deleting it (so you can restore it later):</p>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">In the <a href="{{ mosque.announcementsManage }}">Announcements</a> list, click the <strong>Hide</strong> button on the row &mdash; this commits to GitHub immediately, no separate save step needed.</div></div>
+        <p class="text-muted small">The announcement stays in your list with a <span class="badge text-bg-danger">Hidden</span> badge. To restore it: click the <strong>Show</strong> button (same button, label toggles to "Show" while hidden) &mdash; also saves immediately.</p>
+      </section>
+
+      {% if mosque.parserFormat == 'tralee' %}
+      <!-- ── 7. Jumuah ────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-jumuah">
+        <h2>7. Change the Jumu&#8216;ah Time</h2>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.settingsManage }}">Settings</a>.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Scroll to <strong>Jumu&#8216;ah Time</strong>. Update <strong>Summer time (BST)</strong> (late March &rarr; late October) and/or <strong>Winter time (GMT)</strong> (late October &rarr; late March).</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Click <strong>Save to GitHub</strong>. The new time appears on the live display after the next data refresh.</div></div>
+      </section>
+
+      <!-- ── 8. Theme ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-theme">
+        <h2>8. Change the Display Theme</h2>
+      {% else %}
+      <!-- ── 7. Theme ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-theme">
+        <h2>7. Change the Display Theme</h2>
+      {% endif %}
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.settingsManage }}">Settings</a>.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Scroll to <strong>Theme Selection</strong>. Click a theme <strong>swatch</strong> from the visual grid to select it.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Click <strong>Save to GitHub</strong>.</div></div>
+      </section>
+
+      {% if mosque.parserFormat == 'tralee' %}
+      <!-- ── 9. Adhkar ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-adhkar">
+        <h2>9. Adjust Adhkar Poster Timings</h2>
+      {% else %}
+      <!-- ── 8. Adhkar ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-adhkar">
+        <h2>8. Adjust Adhkar Poster Timings</h2>
+      {% endif %}
+        <p>Adhkar slides automatically appear after each prayer. Settings has a per-prayer table and a separate Friday Jumu'ah table.</p>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.settingsManage }}">Settings</a> and scroll to <strong>Adhkar Display Timing</strong>.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">In the <strong>Per-Prayer Settings</strong> table, edit any prayer row: <strong>Delay after Jamaah (min)</strong> &mdash; pause before Adhkar starts; <strong>Display window (min)</strong> &mdash; total minutes the cycle is active; <strong>Poster 1 (sec)</strong> &mdash; Poster 2 fills remaining window time automatically.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">For Friday Jumu'ah Adhkar, edit the <strong>Friday Dhuhr</strong> table: set <strong>Summer BST trigger</strong> and <strong>Winter GMT trigger</strong> (clock times when Adhkar starts on Fridays).</div></div>
+        <div class="step"><span class="step-badge">4</span><div class="step-body">Click <strong>Save to GitHub</strong>.</div></div>
+      </section>
+
+      {% if mosque.parserFormat == 'tralee' %}
+      <!-- ── 10. Badges ────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-badges">
+        <h2>10. Understanding Status Badges</h2>
+      {% else %}
+      <!-- ── 9. Badges ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-badges">
+        <h2>9. Understanding Status Badges</h2>
+      {% endif %}
+        <table class="table table-sm table-bordered">
+          <thead class="table-light"><tr><th>Badge</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge bg-success badge-pill">Active</span></td><td>Showing on screen right now.</td></tr>
+            <tr><td><span class="badge text-bg-secondary badge-pill">Active soon</span></td><td>In date range but not currently within any active schedule window.</td></tr>
+            <tr><td><span class="badge bg-secondary badge-pill">Inactive</span></td><td>Outside its start/end date range.</td></tr>
+            <tr><td><span class="badge bg-warning text-dark badge-pill">Suppressed now</span></td><td>Inside a suppress period — temporarily hidden.</td></tr>
+            <tr><td><span class="badge text-bg-danger badge-pill">Hidden</span></td><td>Manually hidden via the Hide button.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      {% if mosque.parserFormat == 'tralee' %}
+      <!-- ── 11. Token ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-token">
+        <h2>11. GitHub Token Setup</h2>
+      {% else %}
+      <!-- ── 10. Token ─────────────────────────────────────────────────────── -->
+      <section class="help-section" id="sec-token">
+        <h2>10. GitHub Token Setup</h2>
+      {% endif %}
+        <p>All saves go through the GitHub API so changes are versioned and auto-deployed to the live site.</p>
+        <h3>Create a token (one-time)</h3>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Go to GitHub → <strong>Settings → Developer settings → Fine-grained personal access tokens → Generate new token</strong>.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Set <strong>Repository access</strong> to this repo only.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Under <strong>Permissions → Repository permissions → Contents</strong>, select <strong>Read and write</strong>.</div></div>
+        <div class="step"><span class="step-badge">4</span><div class="step-body">Click Generate, then <strong>copy the token immediately</strong> — you can only see it once.</div></div>
+        <h3>Save the token in your browser</h3>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.manageBase }}">Dashboard</a>.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Paste the token into the <strong>GitHub Token</strong> field and click <strong>Save</strong>.</div></div>
+        <p class="text-muted small">The token is stored only in your browser's <code>localStorage</code>. It is never sent to the server. You only need to do this once per browser (and again in a different browser or private/incognito mode).</p>
+      </section>
+
+    </div><!-- /col content -->
+  </div><!-- /row -->
+</div><!-- /container -->
+
+<!-- Back to top -->
+<button id="backToTop" class="btn btn-secondary btn-sm shadow" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  &#8593; Top
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmBMaa0wdFfZnc91ufPFKFSmlCGj"
+        crossorigin="anonymous"></script>
+<script>
+  // ── Back to top visibility ──────────────────────────────────────────────────
+  const backBtn = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    backBtn.style.display = window.scrollY > 400 ? 'block' : 'none';
+  });
+
+  // ── Sidebar active link via IntersectionObserver ────────────────────────────
+  const sections = document.querySelectorAll('.help-section');
+  const navLinks = document.querySelectorAll('#helpSidebar .nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`#helpSidebar a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // ── Copy pre-block ──────────────────────────────────────────────────────────
+  function copyPre(id, btn) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.replace('btn-outline-secondary', 'btn-success');
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.classList.replace('btn-success', 'btn-outline-secondary');
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

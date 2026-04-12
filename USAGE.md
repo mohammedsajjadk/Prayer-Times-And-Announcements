@@ -1,18 +1,67 @@
 # USAGE — Prayer Times App Operating Guide
 
-This guide covers everything needed to manage the live prayer-times display for both mosques.
+This is the top-level index. Mosque-specific step-by-step guides are in the files below.
+
+| Mosque | Guide |
+|--------|-------|
+| 🇮🇪 Tralee Islamic Centre | [USAGE_TRALEE.md](USAGE_TRALEE.md) |
+| 🕌 Dublin Mosque | [USAGE_DUBLIN.md](USAGE_DUBLIN.md) |
+
+The in-app Help page (accessible from the `← Dashboard` on any manage page) contains the same content in a searchable UI.
 
 ---
 
-## 1. Admin Pages Overview
+## Quick Start — GitHub Token Setup
 
-Each mosque has three management pages:
+All saves go through the GitHub API so changes are versioned and automatically deployed to the live site.
 
-| Page | Tralee URL | Dublin URL | Purpose |
-|------|-----------|-----------|---------|
-| Prayer Times | `/manage/` | `/dublin/manage/` | View, add, edit, and delete prayer time rows |
-| Announcements | `/manage/announcements/` | `/dublin/manage/announcements/` | Manage all announcement types |
-| Settings | `/manage/settings/` | `/dublin/manage/settings/` | Theme, labels, Jumuah, Adhkar, refresh times |
+**Create a token (one-time):**
+1. Go to GitHub → Settings → Developer settings → Fine-grained personal access tokens → **Generate new token**
+2. Set **Repository access** to this repo only
+3. Under **Permissions → Repository permissions → Contents**, select **Read and write**
+4. Click Generate, then **copy the token immediately** (you can only see it once)
+
+**Save the token in your browser:**
+1. Open `/manage/` (Tralee) or `/dublin/manage/` (Dublin)
+2. Paste the token into the **GitHub Token** field and click **Save**
+3. The token is stored only in your browser's `localStorage` — it is never sent to the server
+4. You only need to do this once per browser (and again in incognito/private mode)
+
+---
+
+## Local Development Mode
+
+When running Flask locally (`python app.py`), the management pages detect `localhost` / `127.0.0.1`.
+
+If **no GitHub token is set**, a banner appears and a **Save Locally** button replaces "Save to GitHub". Clicking it:
+- POSTs JSON directly to the Flask server via `POST /api/settings` or `POST /api/announcements`
+- Flask writes the file directly to disk — no git commit needed
+- Changes are visible immediately on the next page load
+
+> **Note:** Image uploads always require a GitHub token even in Local Mode (images are stored in the GitHub repo).
+
+---
+
+## Deploying Changes to Production
+
+The app is hosted on Render. All data files (`*.json`, `*.csv`) live in this GitHub repository.
+
+**Normal workflow (via the management pages):**
+1. Make changes using **Save to GitHub** — changes are committed to `main` automatically
+2. Render auto-deploys from `main` within ~1 minute
+3. The live display picks up new data at the next scheduled refresh (or on F5)
+
+**Forcing an immediate refresh on the live display:**
+- Press **F5** on the live display page, or
+- Add a refresh time 1 minute from now in **Settings → Scheduled Refresh Times**, wait, then remove it
+
+**Pushing local changes to production:**
+```bash
+git add static/data/
+git commit -m "Update settings"
+git push
+```
+
 
 ---
 
