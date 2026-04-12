@@ -145,7 +145,7 @@
     ]
   },
   {
-    "id": "wifi_receiver",
+    "id": "wifi_receiver_apr2026",
     "type": "image",
     "displayCondition": {
       "frequency": 1,
