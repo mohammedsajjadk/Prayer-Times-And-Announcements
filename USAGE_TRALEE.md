@@ -117,56 +117,121 @@ Use this prompt template to ask ChatGPT to generate the announcement image:
 **Generic template:**
 
 ```
-- Create a professional Islamic event poster in image format
+Create a **high-resolution, print-ready event poster** with a **mature, elegant, modern design** and a **tight, space-efficient layout**.
 
-- Event:
-  [EVENT NAME]
+---
 
-- Title:
-  [TITLE / THEME]
+### ⚠️ **STRICT LAYOUT RULES**
 
-- Details:
-  Date: [DAY, DATE]
-  Womens Time: [TIME]
-  Mens Time: [TIME]
-  Venue: [MASJID / LOCATION NAME]
-  [ADDITIONAL LOCATION LINE IF NEEDED]
+* Fully utilize the canvas (no large empty space at top or bottom)
+* Minimize margins while keeping clean edges
+* All content must scale to fill the poster naturally
+* Avoid excessive spacing between sections
+* Ensure strong vertical balance (top → middle → bottom flow)
+* Text should occupy most of the design (approximately 70–85% of space)
 
-- Style:
-  - Mature, elegant, and modern (NOT childish)
-  - No bright playful colors
-  - No cartoon style
-  - No human or living creature figures
-  - Clean and minimal design
+---
 
-- Theme:
-  - Subtle theme of [THEME IDEA – e.g. growth, knowledge, unity, family, spirituality]
-  - Use refined elements like [e.g. books, calligraphy, abstract learning symbols]
-  - Avoid toys or childish graphics
-  - Optional: soft Islamic geometric patterns or mosque silhouette in background
+### 🧾 **CONTENT STRUCTURE (REPLACE AS NEEDED)**
 
-- Colors:
-  - Sophisticated palette (e.g. navy blue, beige, gold, charcoal, off-white)
-  - Soft gradients or lightly textured background
-  - High contrast for readability
+**TITLE (Top – Most Important):**
+[INSERT MAIN EVENT TITLE HERE]
+→ Largest text on poster
+→ Bold and visually dominant
 
-- Typography:
-  - Title "[TITLE]" should be the BIGGEST
-  - Event name "[EVENT NAME]" should be bold and prominent at top
-  - Date should be very large (second biggest)
-  - Time details also large and clear
-  - Venue slightly smaller but readable
-  - Use elegant, modern fonts (no playful fonts)
+---
 
-- Layout:
-  - Structured sections with good spacing
-  - Centered composition
-  - Clean dividers or subtle lines between sections
+**SUBTITLE / DESCRIPTION:**
+[INSERT EVENT DESCRIPTION HERE]
+→ IMPORTANT: Make this **large and clearly readable (not small or faint)**
+→ Second most prominent text block
 
-- Output:
-  - High-resolution, print-ready poster
-  - All text sharp and clearly readable
-```
+---
+
+**DATE / TIME DETAILS:**
+[INSERT DATE & TIME INFO HERE]
+→ Large and bold
+→ Clear hierarchy, easy to scan
+→ Can be split into multiple lines if needed
+
+---
+
+**VENUE (Bottom Center – Least Prominent):**
+[INSERT VENUE HERE]
+→ Smallest text section
+→ Center aligned at bottom
+
+---
+
+### 🖼️ **IMAGE / BACKGROUND REQUIREMENTS**
+
+* Include subtle, relevant thematic imagery (optional but recommended)
+* Images must NOT dominate text
+* If using images:
+
+  * Max 20–30% visual weight each
+  * Soft blend into background
+  * Must remain clear (not overly dark or blurred)
+* Can include abstract or symbolic visuals depending on theme
+* Ensure text remains the primary focus
+
+---
+
+### 🎨 **STYLE DIRECTION**
+
+* Elegant, minimal, and professional
+* No childish or playful design elements
+* No human or living creature illustrations
+* Use structured layout with clear hierarchy
+* Subtle decorative elements only (e.g. geometric patterns, soft gradients)
+
+---
+
+### 🎨 **COLOR PALETTE**
+
+* Use sophisticated tones such as:
+  navy blue, charcoal, deep green, beige, off-white, gold accents
+* Ensure high contrast for readability
+* Avoid overly bright or neon colors
+
+---
+
+### 🔤 **TYPOGRAPHY RULES**
+
+* Strong hierarchy:
+
+  1. Title – largest
+  2. Date/Time – second largest
+  3. Subtitle – medium-large (must be readable, not small)
+  4. Venue – smallest
+* Use clean, modern, professional fonts
+* Avoid decorative or cartoon-style fonts
+
+---
+
+### 📐 **COMPOSITION RULES**
+
+* Centered or balanced structured layout
+* Content should fill the entire vertical space evenly
+* No large blank gaps anywhere
+* Use subtle dividers or spacing for clarity
+* Ensure visual weight is evenly distributed
+
+---
+
+### 🖨️ **OUTPUT REQUIREMENTS**
+
+* Portrait orientation
+* High resolution (300 DPI or higher)
+* Print-ready quality
+* Sharp, readable text
+* Clean margins and professional finish
+
+---
+
+## 💡 Optional add-on line (if AI leaves empty space):
+
+> “Ensure all available space is efficiently used by scaling text and balancing layout; avoid empty areas.”```
 
 ---
 
