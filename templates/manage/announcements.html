@@ -137,6 +137,15 @@
           <input type="file" id="img_file" class="form-control" accept="image/*" onchange="previewImage()">
           <img id="img_preview" class="img-preview mt-2" style="display:none">
         </div>
+        <div class="col-12" id="img_resize_row" style="display:none">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="img_resize" checked>
+            <label class="form-check-label" for="img_resize">
+              Resize to <strong>1320 &times; 1717 px</strong> before uploading
+              <small class="text-muted d-block">Scales &amp; centre-crops to fit. Uncheck to upload the original image unchanged.</small>
+            </label>
+          </div>
+        </div>
         <div class="col-12">
           <label class="form-label">Schedule Windows
             <small class="text-muted">(announcement is active during any of these periods)</small>
@@ -434,6 +443,32 @@ async function saveAnnouncements(announcements, sha, message) {
   if (data.content && data.content.sha) window._annSha = data.content.sha;
 }
 
+// ─── Canvas resize helper ─────────────────────────────────────────────────────
+function resizeImageToCanvas(file, targetW, targetH) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW; canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      // Cover: scale so image fills target, then centre-crop
+      const scale = Math.max(targetW / img.naturalWidth, targetH / img.naturalHeight);
+      const sw = targetW / scale, sh = targetH / scale;
+      const sx = (img.naturalWidth - sw) / 2, sy = (img.naturalHeight - sh) / 2;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Canvas resize failed')); return; }
+        const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+        resolve(new File([blob], name, { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.92);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+    img.src = url;
+  });
+}
+
 // ─── Image upload to GitHub ───────────────────────────────────────────────────
 async function uploadImage(file) {
   return new Promise((resolve, reject) => {
@@ -490,9 +525,22 @@ function renderList(items) {
 
     let detail = '';
     if (type === 'control') {
+      const _isSeasonalMsg = a.id === 'thursday_darood_control' || a.id === 'friday_tafseer_control';
+      const _ctrlDefs = {
+        thursday_darood_control: { summer: 'DUROOD/SALAT-ALA-NABI GATHERING • THURSDAY AFTER MAGHRIB', winter: 'DUROOD/SALAT-ALA-NABI GATHERING • THURSDAY AFTER ISHA' },
+        friday_tafseer_control:  { summer: "TAFSEER OF THE QUR'AN • FRIDAY AFTER MAGHRIB", winter: "TAFSEER OF THE QUR'AN • FRIDAY AFTER ISHA" },
+      };
+      let _msgDetail = '';
+      if (_isSeasonalMsg) {
+        const d = _ctrlDefs[a.id];
+        _msgDetail = `<div class="mt-1 small"><span class="badge text-bg-warning me-1">Summer (BST)</span>${a.messageSummer ? `<span class="fst-italic">&ldquo;${a.messageSummer}&rdquo;</span>` : `<span class="text-muted fst-italic">&ldquo;${d.summer}&rdquo; <em>(built-in default)</em></span>`}</div>` +
+                     `<div class="mt-1 small"><span class="badge text-bg-primary me-1">Winter (GMT)</span>${a.messageWinter ? `<span class="fst-italic">&ldquo;${a.messageWinter}&rdquo;</span>` : `<span class="text-muted fst-italic">&ldquo;${d.winter}&rdquo; <em>(built-in default)</em></span>`}</div>`;
+      } else if (a.message) {
+        _msgDetail = `<div class="mt-1 small fst-italic">&ldquo;${a.message}&rdquo;</div>`;
+      }
       detail = `
         <div class="text-muted">${a.description || ''}</div>
-        ${a.message ? `<div class="mt-1 small fst-italic">"${a.message}"</div>` : ''}
+        ${_msgDetail}
         ${fmtWindows(a.scheduleWindows, 'Shown only within')}
         ${fmtWindows(a.suspendPeriods, 'Suppressed during', 'text-bg-warning text-dark', 'text-bg-secondary')}`;
 
@@ -611,8 +659,15 @@ async function addImage() {
   }
 
   showStatus('Uploading image to GitHub…', 'info');
+  const doResize = document.getElementById('img_resize')?.checked;
+  let fileToUpload = file;
+  if (doResize) {
+    showStatus('Resizing image to 1320×1717…', 'info');
+    try { fileToUpload = await resizeImageToCanvas(file, 1320, 1717); }
+    catch (e) { showStatus('Resize failed: ' + e.message, 'danger'); return; }
+  }
   let imagePath;
-  try { imagePath = await uploadImage(file); }
+  try { imagePath = await uploadImage(fileToUpload); }
   catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
 
   const entry = {
@@ -633,11 +688,12 @@ async function addImage() {
     await saveAnnouncements(updated, window._annSha, `Add image announcement: ${id}`);
     window._annData = updated;
     renderList(updated);
-    showStatus(`&#10003; "${id}" added with image ${file.name}.`, 'success');
+    showStatus(`&#10003; "${id}" added with image ${fileToUpload.name}.`, 'success');
     togglePanel('addImagePanel');
     document.getElementById('img_id').value  = '';
     document.getElementById('img_file').value = '';
     document.getElementById('img_preview').style.display = 'none';
+    document.getElementById('img_resize_row').style.display = 'none';
     document.getElementById('img_windows').innerHTML = _winRowHtml('', '09:00', '', '23:59');
   } catch (e) { showStatus(e.message, 'danger'); }
 }
@@ -753,6 +809,9 @@ function previewImage(inputId, previewId) {
   const reader = new FileReader();
   reader.onload = e => { preview.src = e.target.result; preview.style.display = ''; };
   reader.readAsDataURL(file);
+  if (previewId === 'img_preview') {
+    document.getElementById('img_resize_row').style.display = file ? '' : 'none';
+  }
 }
 
 // ─── Modal helpers (no Bootstrap JS required) ────────────────────────────────
@@ -957,6 +1016,20 @@ function openEdit(idx) {
   } else if (type === 'control') {
     title = 'Edit Control Entry';
     const hasWindows = a.scheduleWindows && a.scheduleWindows.length > 0;
+    const _ctrlIsSeasonalEdit = a.id === 'thursday_darood_control' || a.id === 'friday_tafseer_control';
+    const _ctrlMsgEditHtml = _ctrlIsSeasonalEdit ? `
+        <div class="col-12">
+          <label class="form-label">Rolling message <small class="text-muted">(shown in announcement bar when this control is active)</small></label>
+          <div class="alert alert-info py-2 small mb-2">This control has <strong>seasonal messages</strong> — one for Summer (BST) and one for Winter (GMT). Leave blank to use the built-in default.</div>
+          <label class="form-label form-label-sm fw-semibold">&#9728; Summer (BST)</label>
+          <textarea id="e_ctrl_msg_summer" class="form-control mb-2" rows="2" placeholder="${a.id === 'thursday_darood_control' ? 'Built-in default: DUROOD/SALAT-ALA-NABI GATHERING • THURSDAY AFTER MAGHRIB' : "Built-in default: TAFSEER OF THE QUR'AN • FRIDAY AFTER MAGHRIB"}">${(a.messageSummer || '').replace(/</g, '&lt;')}</textarea>
+          <label class="form-label form-label-sm fw-semibold">&#10052; Winter (GMT)</label>
+          <textarea id="e_ctrl_msg_winter" class="form-control" rows="2" placeholder="${a.id === 'thursday_darood_control' ? 'Built-in default: DUROOD/SALAT-ALA-NABI GATHERING • THURSDAY AFTER ISHA' : "Built-in default: TAFSEER OF THE QUR'AN • FRIDAY AFTER ISHA"}">${(a.messageWinter || '').replace(/</g, '&lt;')}</textarea>
+        </div>` : `
+        <div class="col-12">
+          <label class="form-label">Rolling message <small class="text-muted">(shown in announcement bar when this control is active)</small></label>
+          <textarea id="e_ctrl_msg" class="form-control" rows="2" placeholder="Leave blank to use the built-in default message">${(a.message || '').replace(/</g, '&lt;')}</textarea>
+        </div>`;
     body = `
       <div class="row g-3">
         <div class="col-12">
@@ -969,10 +1042,7 @@ function openEdit(idx) {
           <input type="text" id="e_desc" class="form-control" value="${(a.description || '').replace(/"/g, '&quot;')}">
           <div class="form-text">Internal note about what this control entry toggles.</div>
         </div>
-        <div class="col-12">
-          <label class="form-label">Rolling message <small class="text-muted">(shown in announcement bar when this control is active)</small></label>
-          <textarea id="e_ctrl_msg" class="form-control" rows="2" placeholder="Leave blank to use the built-in default message">${(a.message || '').replace(/</g, '&lt;')}</textarea>
-        </div>
+        ${_ctrlMsgEditHtml}
         <div class="col-12">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="e_hide" ${a.hide ? 'checked' : ''}>
@@ -1098,13 +1168,23 @@ async function saveEdit() {
   } else if (type === 'control') {
     const windows     = readWindowsFromContainer('e_windows');
     const ctrlSuspend = readWindowsFromContainer('e_suspend_windows');
-    const ctrlMsg = document.getElementById('e_ctrl_msg').value.trim();
     updated = {
       ...a,
       description: document.getElementById('e_desc').value.trim(),
       hide:        document.getElementById('e_hide').checked,
     };
-    if (ctrlMsg) { updated.message = ctrlMsg; } else { delete updated.message; }
+    const _summerEl = document.getElementById('e_ctrl_msg_summer');
+    const _winterEl = document.getElementById('e_ctrl_msg_winter');
+    if (_summerEl && _winterEl) {
+      const summerMsg = _summerEl.value.trim();
+      const winterMsg = _winterEl.value.trim();
+      if (summerMsg) { updated.messageSummer = summerMsg; } else { delete updated.messageSummer; }
+      if (winterMsg) { updated.messageWinter = winterMsg; } else { delete updated.messageWinter; }
+      delete updated.message;
+    } else {
+      const ctrlMsg = document.getElementById('e_ctrl_msg').value.trim();
+      if (ctrlMsg) { updated.message = ctrlMsg; } else { delete updated.message; }
+    }
     if (windows.length > 0) { updated.scheduleWindows = windows; }
     else { delete updated.scheduleWindows; }
     if (ctrlSuspend.length > 0) { updated.suspendPeriods = ctrlSuspend; }

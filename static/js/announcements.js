@@ -18,6 +18,14 @@ var announcements = {
     return "TAFSEER OF THE QUR'AN • SURAH TUR • FRIDAY AFTER ISHA";
   },
 
+  thursday_darood_summer: function () {
+    return "DUROOD/SALAT-ALA-NABI صلى الله عليه وسلم GATHERING • THURSDAY AFTER MAGHRIB";
+  },
+
+  friday_tafseer_summer: function () {
+    return "TAFSEER OF THE QUR'AN • SURAH TUR • FRIDAY AFTER MAGHRIB";
+  },
+
   clock_go_forward: function () {
     return "REMEMBER CLOCKS GO FORWARD 1 HOUR THIS SUNDAY";
   },
@@ -595,7 +603,11 @@ var announcementModule = {
         var entry = Array.isArray(dynamicAnnouncements) && dynamicAnnouncements.find(function(a) {
           return a.id === controlId && a.type === 'control';
         });
-        return (entry && entry.message) ? entry.message : defaultFn();
+        if (!entry) return defaultFn();
+        if (isIrishSummerTime && entry.messageSummer) return entry.messageSummer;
+        if (!isIrishSummerTime && entry.messageWinter) return entry.messageWinter;
+        if (entry.message) return entry.message;  // backwards compat
+        return defaultFn();
       }
 
       // Regular announcements logic
@@ -606,15 +618,15 @@ var announcementModule = {
           currentTime < magribJamaahTime + 5
         ) {
           // Thursday
-          message = _controlMsg('thursday_darood_control', announcements.thursday_darood);
+          message = _controlMsg('thursday_darood_control', announcements.thursday_darood_summer);
         }
         else if (!this.isControlHidden("friday_tafseer_control") && dayOfWeek === 4 && currentTime >= magribJamaahTime + 6 && currentTime < (23 * 60 + 59)) {
-          // Thursday After Magrib
-          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
+          // Thursday After Maghrib
+          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer_summer);
         }
         else if (!this.isControlHidden("friday_tafseer_control") && dayOfWeek === 5 && currentTime > (0 * 60 + 1) && currentTime < magribJamaahTime + 10) {
           // Friday
-          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
+          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer_summer);
         }
       } else {
         // Winter time rules
