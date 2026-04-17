@@ -59,6 +59,12 @@
     "images": [
       "/static/images/Tafseer of the Quran.jpg"
     ],
+    "imagesSummer": [
+      "/static/images/Tafseer of the Quran Maghrib.png"
+    ],
+    "imagesWinter": [
+      "/static/images/Tafseer of the Quran.jpg"
+    ],
     "isSpecial": true,
     "hide": false
   },

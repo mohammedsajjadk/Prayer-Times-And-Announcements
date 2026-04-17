@@ -213,11 +213,20 @@ var announcementModule = {
           announcement.type === "image" ||
           (announcement.type === "recurring_weekly" && announcement.images)
         ) {
-          console.log("DEBUG: Adding image announcement:", announcement.id, "Images:", announcement.images);
+          var _isSummer = dateUtils.isIrelandDST(now);
+          var _activeImages;
+          if (announcement.imagesSummer || announcement.imagesWinter) {
+            _activeImages = _isSummer
+              ? (announcement.imagesSummer || announcement.images || [])
+              : (announcement.imagesWinter || announcement.images || []);
+          } else {
+            _activeImages = announcement.images || [];
+          }
+          console.log("DEBUG: Adding image announcement:", announcement.id, "Images:", _activeImages);
           activeAnnouncements.imageAnnouncements.push({
             id: announcement.id,
             isImage: true,
-            images: announcement.images || [],
+            images: _activeImages,
             displayCondition: announcement.displayCondition || {},
             isSpecial: announcement.isSpecial || false,
           });

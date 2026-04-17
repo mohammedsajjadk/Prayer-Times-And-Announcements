@@ -546,15 +546,20 @@ function renderList(items) {
 
     } else if (type === 'recurring_weekly') {
       const day  = DAYS[a.dayOfWeek] || a.dayOfWeek;
-      const imgs = (a.images || []).map(i =>
-        `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
-      ).join('');
       const seasonal = fmtSeasonal(a.seasonalTiming);
       const dc       = fmtDC(a.displayCondition);
+      const _hasSeasonalImg = !!(a.imagesSummer || a.imagesWinter);
+      const _mkImgs = arr => (arr || []).map(i =>
+        `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
+      ).join('');
+      const imgDetail = _hasSeasonalImg
+        ? `<div class="mt-1"><span class="badge text-bg-warning text-dark me-1">&#9728; Summer (BST)</span>${_mkImgs(a.imagesSummer || a.images)}</div>
+           <div class="mt-1"><span class="badge text-bg-info me-1">&#10052; Winter (GMT)</span>${_mkImgs(a.imagesWinter || a.images)}</div>`
+        : (_mkImgs(a.images) ? `<div class="mt-1">${_mkImgs(a.images)}</div>` : '');
       detail = `
         <div>Every <strong>${day}</strong> ${dc}</div>
         ${seasonal ? `<div class="mt-1">${seasonal}</div>` : ''}
-        ${imgs ? `<div class="mt-1">${imgs}</div>` : ''}
+        ${imgDetail}
         ${fmtWindows(a.scheduleWindows, 'Shown only within')}
         ${fmtWindows(a.suspendPeriods, 'Suppressed during', 'text-bg-warning text-dark', 'text-bg-secondary')}`;
 
@@ -970,13 +975,20 @@ function openEdit(idx) {
           <input type="number" id="e_dur" class="form-control" value="${dc.duration ?? 60}" min="5">
         </div>
         <div class="col-12">
-          <label class="form-label">Current image</label><br>
-          ${img ? `<img src="${img}" style="max-height:80px;border-radius:4px;border:1px solid #ddd" class="mb-1"><div class="small text-muted">${img}</div>` : '<span class="text-muted small">none</span>'}
+          <hr class="my-1">
+          <div class="fw-semibold mb-2">Images</div>
+          <label class="form-label">&#9728; Summer (BST) — current</label><br>
+          ${(a.imagesSummer || a.images || [])[0] ? `<img src="${(a.imagesSummer || a.images || [])[0]}" style="max-height:80px;border-radius:4px;border:1px solid #ddd" class="mb-1"><div class="small text-muted">${(a.imagesSummer || a.images || [])[0]}</div>` : '<span class="text-muted small">none</span>'}
+          <label class="form-label mt-2">Replace summer image <small class="text-muted">(leave empty to keep current)</small></label>
+          <input type="file" id="e_file_summer" class="form-control" accept="image/*" onchange="previewImage('e_file_summer','e_preview_summer')">
+          <img id="e_preview_summer" class="img-preview mt-2" style="display:none">
         </div>
         <div class="col-12">
-          <label class="form-label">Replace image <small class="text-muted">(leave empty to keep current)</small></label>
-          <input type="file" id="e_file" class="form-control" accept="image/*" onchange="previewImage('e_file','e_preview')">
-          <img id="e_preview" class="img-preview mt-2" style="display:none">
+          <label class="form-label">&#10052; Winter (GMT) — current</label><br>
+          ${(a.imagesWinter || a.images || [])[0] ? `<img src="${(a.imagesWinter || a.images || [])[0]}" style="max-height:80px;border-radius:4px;border:1px solid #ddd" class="mb-1"><div class="small text-muted">${(a.imagesWinter || a.images || [])[0]}</div>` : '<span class="text-muted small">none</span>'}
+          <label class="form-label mt-2">Replace winter image <small class="text-muted">(leave empty to keep current)</small></label>
+          <input type="file" id="e_file_winter" class="form-control" accept="image/*" onchange="previewImage('e_file_winter','e_preview_winter')">
+          <img id="e_preview_winter" class="img-preview mt-2" style="display:none">
         </div>
         <div class="col-12">
           <div class="form-check form-check-inline">
@@ -1134,12 +1146,19 @@ async function saveEdit() {
 
   } else if (type === 'recurring_weekly') {
     const newId = _resolveId(); if (newId === null) return;
-    const file = document.getElementById('e_file').files[0];
-    let images = a.images || [];
-    if (file) {
-      showStatus('Uploading new image…', 'info');
-      try { images = [await uploadImage(file)]; }
-      catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
+    const fileSummer = document.getElementById('e_file_summer').files[0];
+    let imagesSummer = a.imagesSummer || null;
+    if (fileSummer) {
+      showStatus('Uploading summer image…', 'info');
+      try { imagesSummer = [await uploadImage(fileSummer)]; }
+      catch (e) { showStatus('Summer image upload failed: ' + e.message, 'danger'); return; }
+    }
+    const fileWinter = document.getElementById('e_file_winter').files[0];
+    let imagesWinter = a.imagesWinter || null;
+    if (fileWinter) {
+      showStatus('Uploading winter image…', 'info');
+      try { imagesWinter = [await uploadImage(fileWinter)]; }
+      catch (e) { showStatus('Winter image upload failed: ' + e.message, 'danger'); return; }
     }
     let seasonal = a.seasonalTiming;
     try { seasonal = JSON.parse(document.getElementById('e_seasonal').value); }
@@ -1156,10 +1175,11 @@ async function saveEdit() {
         duration:        parseInt(document.getElementById('e_dur').value, 10) || 60,
         avoidJamaahTime: document.getElementById('e_avoid').checked,
       },
-      images,
       seasonalTiming: seasonal,
       isSpecial: document.getElementById('e_special').checked,
     };
+    if (imagesSummer) { updated.imagesSummer = imagesSummer; } else { delete updated.imagesSummer; }
+    if (imagesWinter) { updated.imagesWinter = imagesWinter; } else { delete updated.imagesWinter; }
     if (rwWindows.length > 0) { updated.scheduleWindows = rwWindows; }
     else { delete updated.scheduleWindows; }
     if (rwSuspend.length > 0) { updated.suspendPeriods = rwSuspend; }
