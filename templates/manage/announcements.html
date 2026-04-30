@@ -9,25 +9,61 @@
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
         crossorigin="anonymous">
   <style>
-    body { background: #f5f5f5; }
+    body { background: #f0f2f5; }
     .navbar-brand { font-weight: 700; }
-    /* Card design */
-    .ann-card { border-left: 4px solid #0d6efd; transition: box-shadow .15s; }
-    .ann-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-    .ann-card.type-control  { border-left-color: #6f42c1; }
-    .ann-card.type-recurring { border-left-color: #198754; }
-    .ann-card.type-image     { border-left-color: #fd7e14; }
-    .ann-card.is-hidden { opacity: .55; }
-    .ann-card.is-hidden .ann-id { text-decoration: line-through; color: #6c757d; }
+    /* Stats strip */
+    .stats-strip { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;
+      background: #fff; border-radius: 8px; padding: .45rem .85rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07); font-size: .82rem; }
+    .stat-pill { display: inline-flex; align-items: center; gap: .3rem; }
+    /* Table */
+    #annTable { background: #fff; border-collapse: separate !important; border-spacing: 0;
+      border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.09); }
+    #annTable thead th { background: #f8f9fa; font-size: .73rem; text-transform: uppercase;
+      letter-spacing: .05em; color: #6c757d; padding: .5rem .7rem; white-space: nowrap;
+      border-bottom: 2px solid #dee2e6 !important; }
+    .ann-row { cursor: pointer; }
+    .ann-row:hover > td { background: #f5f8ff !important; }
+    .ann-row.is-open > td { background: #fffbf0 !important; }
+    .ann-row.is-hidden > td { opacity: .55; }
+    .ann-row.is-hidden .ann-id { text-decoration: line-through; color: #6c757d; }
+    .ann-row > td { vertical-align: middle; padding: .4rem .65rem !important; font-size: .875rem;
+      border-bottom: 1px solid #f0f0f0 !important; }
+    /* Type stripe */
+    .type-stripe { width: 5px !important; padding: 0 !important; }
+    .type-stripe.tc-control   { background: #6f42c1; }
+    .type-stripe.tc-recurring { background: #198754; }
+    .type-stripe.tc-image     { background: #fd7e14; }
+    .type-stripe.tc-text      { background: #0d6efd; }
+    /* Chevron */
+    .row-chevron { display: inline-block; font-size: .6rem; color: #ced4da;
+      transition: transform .15s; margin-right: .3rem; vertical-align: middle; }
+    .ann-row.is-open .row-chevron { transform: rotate(90deg); color: #6c757d; }
+    /* Detail row */
+    .ann-detail-row { display: none; }
+    .ann-detail-row.is-open { display: table-row; }
+    .ann-detail-row > td { background: #fafafa !important; border-bottom: 2px solid #e9ecef !important;
+      padding: .7rem 1rem !important; }
+    .detail-inner { font-size: .85rem; }
+    /* Summary & actions */
+    .summary-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; }
+    .actions-cell { white-space: nowrap; }
+    /* Type badges */
+    .type-badge { font-size: .68rem; padding: .1rem .38rem; border-radius: .25rem; font-weight: 600; white-space: nowrap; margin-right: .35rem; vertical-align: middle; }
+    .type-badge.tc-control   { background: #ede9ff; color: #5a2d91; }
+    .type-badge.tc-recurring { background: #d1e7dd; color: #0a3622; }
+    .type-badge.tc-image     { background: #fff3cd; color: #664d03; }
+    .type-badge.tc-text      { background: #cfe2ff; color: #052c65; }
+    /* When (schedule) cell */
+    .when-cell { font-size: .8rem; color: #6c757d; white-space: nowrap; }
     /* Filter bar */
-    .filter-tab { cursor: pointer; border-radius: .35rem; padding: .2rem .6rem; font-size: .8rem; }
+    .filter-tab { cursor: pointer; border-radius: .35rem; padding: .2rem .6rem; font-size: .8rem; user-select: none; }
     .filter-tab.active { background: #0d6efd; color: #fff; }
     .filter-tab:not(.active) { background: #e9ecef; color: #495057; }
     .filter-tab:hover:not(.active) { background: #dee2e6; }
     /* Misc */
     .img-preview { max-height: 80px; border-radius: 4px; }
     .window-row { border-left: 3px solid #dee2e6; padding-left: 8px; }
-    .type-icon { font-style: normal; }
   </style>
 </head>
 <body>
@@ -70,6 +106,9 @@
     &#128187; <strong>Local Mode</strong> — No GitHub token set. Saves go directly to disk. Image uploads still require a token.
   </div>
 
+  <!-- Stats strip -->
+  <div id="statsStrip" class="stats-strip mb-2"></div>
+
   <!-- Toolbar -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
     <h4 class="mb-0">Announcements</h4>
@@ -83,7 +122,7 @@
   <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
     <div class="d-flex gap-1 flex-wrap" id="filterTabs">
       <span class="filter-tab active" data-filter="all"    onclick="setFilter('all')">All</span>
-      <span class="filter-tab"        data-filter="control"   onclick="setFilter('control')">&#128295; Controls</span>
+      <span class="filter-tab"        data-filter="control"   onclick="setFilter('control')">&#128295; Rolling Notice</span>
       <span class="filter-tab"        data-filter="recurring_weekly" onclick="setFilter('recurring_weekly')">&#128260; Recurring</span>
       <span class="filter-tab"        data-filter="image"    onclick="setFilter('image')">&#128444; Images</span>
       <span class="filter-tab"        data-filter="text"     onclick="setFilter('text')">&#128172; Text</span>
@@ -220,6 +259,12 @@
 
 </div>
 
+<!-- ── Image Lightbox ──────────────────────────────────────────────────────── -->
+<div id="imgLightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);cursor:zoom-out;align-items:center;justify-content:center;">
+  <img id="imgLightboxImg" src="" alt="" style="max-width:92vw;max-height:92vh;border-radius:6px;box-shadow:0 4px 40px rgba(0,0,0,.7);pointer-events:none;">
+  <button onclick="closeLightbox()" aria-label="Close" style="position:absolute;top:.75rem;right:1rem;background:none;border:none;color:#fff;font-size:2rem;line-height:1;cursor:pointer;opacity:.75;">&#10005;</button>
+</div>
+
 <!-- ── Edit Modal ──────────────────────────────────────────────────────────── -->
 <div class="modal fade" id="editModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -330,7 +375,8 @@ function fmtWindows(windows, label, activeCls, nextCls) {
 
 // Compute a single overall status pill for the card header
 function computeStatus(a) {
-  const now = Date.now();
+  const now     = Date.now();
+  const SOON_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
   if (a.hide === true) {
     return '<span class="badge text-bg-danger">Hidden</span>';
   }
@@ -348,14 +394,23 @@ function computeStatus(a) {
     );
     const next = a.scheduleWindows.find(w => new Date(w.start).getTime() > now);
     if (!active && !next) return '<span class="badge bg-light text-dark border">Inactive</span>';
-    if (!active && next)  return '<span class="badge text-bg-secondary">Active soon</span>';
+    if (!active && next) {
+      const wait = new Date(next.start).getTime() - now;
+      return wait <= SOON_MS
+        ? '<span class="badge text-bg-secondary">Active soon</span>'
+        : '<span class="badge bg-light text-dark border">Scheduled</span>';
+    }
   }
   // For announcements with startDate/endDate but no scheduleWindows, check the date range
   if (!a.scheduleWindows || !a.scheduleWindows.length) {
     const start = a.startDate ? new Date(a.startDate).getTime() : 0;
     const end   = a.endDate   ? new Date(a.endDate).getTime()   : Infinity;
-    if (now < start) return '<span class="badge text-bg-secondary">Active soon</span>';
-    if (now > end)   return '<span class="badge bg-light text-dark border">Inactive</span>';
+    if (now < start) {
+      return (start - now) <= SOON_MS
+        ? '<span class="badge text-bg-secondary">Active soon</span>'
+        : '<span class="badge bg-light text-dark border">Scheduled</span>';
+    }
+    if (now > end) return '<span class="badge bg-light text-dark border">Inactive</span>';
   }
   return '<span class="badge text-bg-success">Active</span>';
 }
@@ -534,8 +589,9 @@ async function loadAnnouncements() {
 }
 
 function renderList(items) {
+  renderStats(items);
   if (!items.length) {
-    document.getElementById('annList').innerHTML = '<div class="alert alert-info">No announcements.</div>';
+    document.getElementById('annList').innerHTML = '<div class="alert alert-info mt-2">No announcements.</div>';
     return;
   }
 
@@ -572,7 +628,7 @@ function renderList(items) {
       const dc       = fmtDC(a.displayCondition);
       const _hasSeasonalImg = !!(a.imagesSummer || a.imagesWinter);
       const _mkImgs = arr => (arr || []).map(i =>
-        `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
+        `<img src="${i}" class="img-preview me-1" style="cursor:zoom-in" onclick="openLightbox(event,'${i}')" onerror="this.style.display='none'">`
       ).join('');
       const imgDetail = _hasSeasonalImg
         ? `<div class="mt-1"><span class="badge text-bg-warning text-dark me-1">&#9728; Summer (BST)</span>${_mkImgs(a.imagesSummer || a.images)}</div>
@@ -587,7 +643,7 @@ function renderList(items) {
 
     } else if (type === 'image') {
       const imgs = (a.images || []).map(i =>
-        `<img src="${i}" class="img-preview me-1" onerror="this.style.display='none'">`
+        `<img src="${i}" class="img-preview me-1" style="cursor:zoom-in" onclick="openLightbox(event,'${i}')" onerror="this.style.display='none'">`
       ).join('');
       const dc = fmtDC(a.displayCondition);
       const dateStr = a.scheduleWindows && a.scheduleWindows.length
@@ -615,30 +671,116 @@ function renderList(items) {
     const hideBtnLabel = hidden ? 'Show' : 'Hide';
     const hideBtnClass = hidden ? 'btn-outline-success' : 'btn-outline-secondary';
 
+    const name        = rowName(a);
+    const when        = rowWhen(a);
+    const stripeClass = type === 'control'         ? 'tc-control'
+                      : type === 'recurring_weekly' ? 'tc-recurring'
+                      : type === 'image'            ? 'tc-image' : 'tc-text';
+    const typeLabel   = type === 'control'         ? 'Rolling Notice'
+                      : type === 'recurring_weekly' ? 'Weekly'
+                      : type === 'image'            ? 'Image' : 'Text';
+    const searchStr   = (humanId(a.id) + ' ' + (a.message || '') + ' ' + (a.description || '')).toLowerCase().replace(/"/g, '');
+
     return `
-      <div class="card mb-2 ann-card ${typeClass} ${hiddenClass}" data-type="${type}" data-search="${(a.id + ' ' + (a.message || '') + ' ' + (a.description || '')).toLowerCase()}">
-        <div class="card-body py-2">
-          <div class="d-flex justify-content-between align-items-start gap-2">
-            <div style="min-width:0">
-              <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
-                <span class="badge bg-secondary type-icon">${typeIcon}</span>
-                <strong class="ann-id">${a.id}</strong>
-                <span class="ms-auto">${status}</span>
-              </div>
-              <div class="small">${detail}</div>
-            </div>
-            <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end ms-2">
-              <button class="btn btn-sm btn-outline-primary py-0" onclick="openEdit(${idx})">&#9998; Edit</button>
-              <button class="btn btn-sm ${hideBtnClass} py-0" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
-              <button class="btn btn-sm btn-outline-danger py-0" onclick="deleteAnn(${idx})">&#10005;</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
+      <tr class="ann-row ${hiddenClass}" data-type="${type}" data-search="${searchStr}" data-idx="${idx}" onclick="toggleRow(${idx})">
+        <td class="type-stripe ${stripeClass}"></td>
+        <td><span class="type-badge ${stripeClass}">${typeLabel}</span><span class="row-chevron">&#9658;</span><span class="ann-name">${name}</span></td>
+        <td class="when-cell">${when}</td>
+        <td>${status}</td>
+        <td class="actions-cell text-end" onclick="event.stopPropagation()">
+          <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openEdit(${idx})">&#9998;</button>
+          <button class="btn btn-sm ${hideBtnClass} py-0 px-2" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
+          <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteAnn(${idx})">&#10005;</button>
+        </td>
+      </tr>
+      <tr class="ann-detail-row" id="detail-row-${idx}">
+        <td class="type-stripe ${stripeClass}"></td>
+        <td colspan="4"><div class="detail-inner">${detail}</div></td>
+      </tr>`;
   }).join('');
 
-  document.getElementById('annList').innerHTML = html;
+  document.getElementById('annList').innerHTML =
+    '<div class="table-responsive"><table class="table table-sm mb-0" id="annTable">' +
+    '<thead><tr><th class="type-stripe"></th><th>Name</th><th>Schedule</th><th>Status</th><th class="text-end">Actions</th></tr></thead>' +
+    '<tbody>' + html + '</tbody></table></div>';
   filterList();
+}
+
+// ─── Render helpers ──────────────────────────────────────────────────────────
+function humanId(id) {
+  // Strip known type suffixes, replace underscores → spaces, title-case
+  return (id || '')
+    .replace(/_control$/, '')
+    .replace(/_recurring$/, '')
+    .replace(/_weekly$/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function rowName(a) {
+  const type = a.type || 'text';
+  if (type === 'text') {
+    // Show the actual message — it is the most meaningful thing
+    const msg = a.message || '';
+    return msg.length > 60 ? msg.substring(0, 60) + '…' : (msg || humanId(a.id));
+  }
+  return humanId(a.id);
+}
+
+function rowWhen(a) {
+  const type = a.type || 'text';
+  if (type === 'control') return '';
+  if (type === 'recurring_weekly') return 'Every ' + (DAYS[a.dayOfWeek] || a.dayOfWeek);
+  // image or text — prefer scheduleWindows, fallback to startDate/endDate
+  if (a.scheduleWindows && a.scheduleWindows.length) {
+    const now = Date.now();
+    return a.scheduleWindows.map(w => {
+      const isPast = new Date(w.end).getTime() < now;
+      const label  = fmtIso(w.start) + ' → ' + fmtIso(w.end);
+      return isPast
+        ? '<span style="opacity:.38;text-decoration:line-through">' + label + '</span>'
+        : '<span>' + label + '</span>';
+    }).join('<br>');
+  }
+  if (a.startDate || a.endDate) return fmtIso(a.startDate) + ' → ' + fmtIso(a.endDate);
+  return '';
+}
+
+function renderStats(items) {
+  const el = document.getElementById('statsStrip');
+  if (!el) return;
+  const total = items.length;
+  let active = 0, hidden = 0, suppressed = 0, upcoming = 0;
+  items.forEach(a => {
+    if (a.hide === true) { hidden++; return; }
+    const s = computeStatus(a);
+    if (s.includes('Suppressed')) suppressed++;
+    else if (s.includes('soon') || s.includes('Scheduled')) upcoming++;
+    else if (s.includes('Active')) active++;
+  });
+  el.innerHTML =
+    '<span class="fw-semibold text-secondary me-2">' + total + ' total</span>' +
+    '<span class="stat-pill"><span class="badge text-bg-success">' + active + '</span>&nbsp;active</span>' +
+    (upcoming   ? '&ensp;<span class="stat-pill"><span class="badge text-bg-secondary">' + upcoming + '</span>&nbsp;upcoming</span>' : '') +
+    (suppressed ? '&ensp;<span class="stat-pill"><span class="badge text-bg-warning text-dark">' + suppressed + '</span>&nbsp;suppressed</span>' : '') +
+    (hidden     ? '&ensp;<span class="stat-pill"><span class="badge text-bg-danger">' + hidden + '</span>&nbsp;hidden</span>' : '');
+}
+
+let _openRow = null;
+function toggleRow(idx) {
+  const row       = document.querySelector('.ann-row[data-idx="' + idx + '"]');
+  const detailRow = document.getElementById('detail-row-' + idx);
+  if (!row || !detailRow) return;
+  const wasOpen = row.classList.contains('is-open');
+  if (_openRow !== null && _openRow !== idx) {
+    const pr = document.querySelector('.ann-row[data-idx="' + _openRow + '"]');
+    const pd = document.getElementById('detail-row-' + _openRow);
+    if (pr) pr.classList.remove('is-open');
+    if (pd) pd.classList.remove('is-open');
+  }
+  row.classList.toggle('is-open', !wasOpen);
+  detailRow.classList.toggle('is-open', !wasOpen);
+  _openRow = wasOpen ? null : idx;
 }
 
 // ─── Filter ───────────────────────────────────────────────────────────────────
@@ -653,12 +795,16 @@ function setFilter(f) {
 function filterList() {
   const q = (document.getElementById('filterSearch')?.value || '').toLowerCase().trim();
   let shown = 0, total = 0;
-  document.querySelectorAll('#annList .ann-card').forEach(card => {
+  document.querySelectorAll('#annList .ann-row').forEach(row => {
     total++;
-    const typeMatch = _activeFilter === 'all' || card.dataset.type === _activeFilter;
-    const textMatch = !q || (card.dataset.search || '').includes(q);
+    const typeMatch = _activeFilter === 'all' || row.dataset.type === _activeFilter;
+    const textMatch = !q || (row.dataset.search || '').includes(q);
     const visible   = typeMatch && textMatch;
-    card.style.display = visible ? '' : 'none';
+    const ridx = row.dataset.idx;
+    row.style.display = visible ? '' : 'none';
+    const dr = document.getElementById('detail-row-' + ridx);
+    if (dr && !visible) { dr.style.display = 'none'; dr.classList.remove('is-open'); row.classList.remove('is-open'); }
+    else if (dr && visible && dr.classList.contains('is-open')) dr.style.display = '';
     if (visible) shown++;
   });
   const countEl = document.getElementById('filterCount');
@@ -1268,6 +1414,20 @@ async function saveEdit() {
     showStatus(`&#10003; "${a.id}" updated.`, 'success');
   } catch (e) { showStatus(e.message, 'danger'); }
 }
+
+// ─── Lightbox ────────────────────────────────────────────────────────────────
+function openLightbox(e, src) {
+  e.stopPropagation(); // don't toggle the row
+  document.getElementById('imgLightboxImg').src = src;
+  const lb = document.getElementById('imgLightbox');
+  lb.style.display = 'flex';
+  document.addEventListener('keydown', _lbKey);
+}
+function closeLightbox() {
+  document.getElementById('imgLightbox').style.display = 'none';
+  document.removeEventListener('keydown', _lbKey);
+}
+function _lbKey(e) { if (e.key === 'Escape') closeLightbox(); }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 showTokenState();
