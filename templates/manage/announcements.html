@@ -606,19 +606,48 @@ function renderList(items) {
                      : type === 'recurring_weekly' ? '&#128260;'
                      : type === 'image'            ? '&#128444;' : '&#128172;';
 
+    // Inline DST check: last Sunday of March (clocks fwd) to last Sunday of October (clocks back)
+    const _isBST = (() => {
+      const d = new Date();
+      const yr = d.getFullYear();
+      const lastSunMar = new Date(yr, 2, 31); lastSunMar.setDate(31 - lastSunMar.getDay());
+      const lastSunOct = new Date(yr, 9, 31); lastSunOct.setDate(31 - lastSunOct.getDay());
+      return d >= lastSunMar && d < lastSunOct;
+    })();
+
     let detail = '';
     if (type === 'control') {
       const _isSeasonalMsg = a.id === 'thursday_darood_control' || a.id === 'friday_tafseer_control';
-      let _msgDetail = '';
+      // "Currently showing" callout
+      let _activeMsg = '';
       if (_isSeasonalMsg) {
-        _msgDetail = `<div class="mt-1 small"><span class="badge text-bg-warning me-1">Summer (BST)</span>${a.messageSummer ? `<span class="fst-italic">&ldquo;${a.messageSummer}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>` +
-                     `<div class="mt-1 small"><span class="badge text-bg-primary me-1">Winter (GMT)</span>${a.messageWinter ? `<span class="fst-italic">&ldquo;${a.messageWinter}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>`;
+        const _nowSeason  = _isBST ? 'Summer (BST)' : 'Winter (GMT)';
+        const _nowBadge   = _isBST
+          ? '<span class="badge text-bg-warning text-dark me-1">&#9728; Summer (BST) — now</span>'
+          : '<span class="badge text-bg-primary me-1">&#10052; Winter (GMT) — now</span>';
+        const _nowText = _isBST
+          ? (a.messageSummer || '<em class="text-muted">(built-in default)</em>')
+          : (a.messageWinter || '<em class="text-muted">(built-in default)</em>');
+        _activeMsg = `<div class="p-2 mb-2 rounded" style="background:#f0fdf4;border-left:3px solid #198754">
+          <div class="small fw-semibold text-success mb-1">Currently showing</div>
+          <div>${_nowBadge}<span class="fst-italic">&ldquo;${_nowText}&rdquo;</span></div>
+        </div>`;
       } else if (a.message) {
-        _msgDetail = `<div class="mt-1 small fst-italic">&ldquo;${a.message}&rdquo;</div>`;
+        _activeMsg = `<div class="p-2 mb-2 rounded" style="background:#f0fdf4;border-left:3px solid #198754">
+          <div class="small fw-semibold text-success mb-1">Currently showing</div>
+          <div class="fst-italic">&ldquo;${a.message}&rdquo;</div>
+        </div>`;
+      }
+      let _msgSeasonDetail = '';
+      if (_isSeasonalMsg) {
+        _msgSeasonDetail =
+          `<div class="mt-1 small"><span class="badge text-bg-warning text-dark me-1">Summer (BST)</span>${a.messageSummer ? `<span class="fst-italic">&ldquo;${a.messageSummer}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>` +
+          `<div class="mt-1 small"><span class="badge text-bg-primary me-1">Winter (GMT)</span>${a.messageWinter ? `<span class="fst-italic">&ldquo;${a.messageWinter}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>`;
       }
       detail = `
-        <div class="text-muted">${a.description || ''}</div>
-        ${_msgDetail}
+        ${_activeMsg}
+        <div class="text-muted small">${a.description || ''}</div>
+        ${_msgSeasonDetail}
         ${fmtWindows(a.scheduleWindows, 'Shown only within')}
         ${fmtWindows(a.suspendPeriods, 'Suppressed during', 'text-bg-warning text-dark', 'text-bg-secondary')}`;
 
@@ -657,12 +686,18 @@ function renderList(items) {
 
     } else {
       // text
-      const specBadge = a.isSpecial ? '<span class="badge text-bg-danger me-1">Special</span>' : '';
+      const specBadge  = a.isSpecial ? '<span class="badge text-bg-danger me-1">Special</span>' : '';
+      const statusNow  = computeStatus(a);
+      const isActiveNow = statusNow.includes('text-bg-success');
+      const msgCallout = a.message ? `<div class="p-2 mb-2 rounded" style="background:${isActiveNow ? '#f0fdf4;border-left:3px solid #198754' : '#f8f9fa;border-left:3px solid #adb5bd'}">
+          <div class="small fw-semibold mb-1" style="color:${isActiveNow ? '#198754' : '#6c757d'}">${isActiveNow ? 'Currently showing' : 'Message'}</div>
+          <div>${specBadge}<span class="fst-italic">&ldquo;${a.message}&rdquo;</span></div>
+        </div>` : '';
       const dateStr = a.scheduleWindows && a.scheduleWindows.length
         ? ''
-        : `<div>${fmtIso(a.startDate)} → ${fmtIso(a.endDate)}</div>`;
+        : `<div class="small text-muted">${fmtIso(a.startDate)} → ${fmtIso(a.endDate)}</div>`;
       detail = `
-        <div>${specBadge}${a.message || ''}</div>
+        ${msgCallout}
         ${dateStr}
         ${fmtWindows(a.scheduleWindows, 'Shown only within')}`;
     }
