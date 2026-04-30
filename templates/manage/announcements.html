@@ -11,13 +11,23 @@
   <style>
     body { background: #f5f5f5; }
     .navbar-brand { font-weight: 700; }
-    .ann-card { border-left: 4px solid #0d6efd; }
-    .ann-card.type-control { border-left-color: #6f42c1; }
+    /* Card design */
+    .ann-card { border-left: 4px solid #0d6efd; transition: box-shadow .15s; }
+    .ann-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .ann-card.type-control  { border-left-color: #6f42c1; }
     .ann-card.type-recurring { border-left-color: #198754; }
-    .ann-card.type-image { border-left-color: #fd7e14; }
-    .ann-card.is-hidden { background: #e9ecef !important; border-left-color: #aaa !important; }
+    .ann-card.type-image     { border-left-color: #fd7e14; }
+    .ann-card.is-hidden { opacity: .55; }
+    .ann-card.is-hidden .ann-id { text-decoration: line-through; color: #6c757d; }
+    /* Filter bar */
+    .filter-tab { cursor: pointer; border-radius: .35rem; padding: .2rem .6rem; font-size: .8rem; }
+    .filter-tab.active { background: #0d6efd; color: #fff; }
+    .filter-tab:not(.active) { background: #e9ecef; color: #495057; }
+    .filter-tab:hover:not(.active) { background: #dee2e6; }
+    /* Misc */
     .img-preview { max-height: 80px; border-radius: 4px; }
     .window-row { border-left: 3px solid #dee2e6; padding-left: 8px; }
+    .type-icon { font-style: normal; }
   </style>
 </head>
 <body>
@@ -34,24 +44,20 @@
 
 <div class="container-lg">
 
-  <!-- Token card (shared with prayer times page via same localStorage key) -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <h6 class="card-title mb-2">GitHub Token</h6>
-      <div id="tokenSetSection">
-        <div class="input-group mb-2" style="max-width:520px">
-          <input type="password" id="tokenInput" class="form-control"
-                 placeholder="Paste your GitHub fine-grained token">
-          <button class="btn btn-primary" onclick="saveToken()">Save</button>
+  <!-- Token card -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <div id="tokenSetSection" style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem">
+        <span class="fw-semibold small text-muted me-1">GitHub Token</span>
+        <div class="input-group" style="max-width:420px">
+          <input type="password" id="tokenInput" class="form-control form-control-sm"
+                 placeholder="Paste your fine-grained token (Contents: Read &amp; write)">
+          <button class="btn btn-primary btn-sm" onclick="saveToken()">Save</button>
         </div>
-        <small class="text-muted">
-          Saved only in your browser (localStorage). Never sent to the server.
-          Needs <em>Contents: Read and write</em> permission on the prayer-times repo.
-        </small>
       </div>
       <div id="tokenSavedSection" style="display:none">
-        <span class="text-success fw-semibold">&#10003; Token saved</span>
-        <button class="btn btn-sm btn-outline-danger ms-3" onclick="clearToken()">Clear</button>
+        <span class="text-success fw-semibold small">&#10003; Token saved</span>
+        <button class="btn btn-sm btn-outline-danger ms-2" onclick="clearToken()">Clear</button>
       </div>
     </div>
   </div>
@@ -65,12 +71,26 @@
   </div>
 
   <!-- Toolbar -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
     <h4 class="mb-0">Announcements</h4>
     <div class="d-flex gap-2">
       <button class="btn btn-primary btn-sm" onclick="togglePanel('addTextPanel')">&#43; Text</button>
       <button class="btn btn-success btn-sm" onclick="togglePanel('addImagePanel')">&#43; Image</button>
     </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div class="d-flex gap-1 flex-wrap" id="filterTabs">
+      <span class="filter-tab active" data-filter="all"    onclick="setFilter('all')">All</span>
+      <span class="filter-tab"        data-filter="control"   onclick="setFilter('control')">&#128295; Controls</span>
+      <span class="filter-tab"        data-filter="recurring_weekly" onclick="setFilter('recurring_weekly')">&#128260; Recurring</span>
+      <span class="filter-tab"        data-filter="image"    onclick="setFilter('image')">&#128444; Images</span>
+      <span class="filter-tab"        data-filter="text"     onclick="setFilter('text')">&#128172; Text</span>
+    </div>
+    <input type="search" id="filterSearch" class="form-control form-control-sm ms-auto" style="max-width:220px"
+           placeholder="Search ID or message…" oninput="filterList()">
+    <span id="filterCount" class="text-muted small"></span>
   </div>
 
   <!-- Add Text panel -->
@@ -142,7 +162,7 @@
             <input class="form-check-input" type="checkbox" id="img_resize" checked>
             <label class="form-check-label" for="img_resize">
               Resize to <strong>1320 &times; 1717 px</strong> before uploading
-              <small class="text-muted d-block">Scales &amp; centre-crops to fit. Uncheck to upload the original image unchanged.</small>
+              <small class="text-muted d-block">Scales to fit without cropping, centred on white background. Uncheck to upload the original image unchanged.</small>
             </label>
           </div>
         </div>
@@ -453,11 +473,15 @@ function resizeImageToCanvas(file, targetW, targetH) {
       const canvas = document.createElement('canvas');
       canvas.width = targetW; canvas.height = targetH;
       const ctx = canvas.getContext('2d');
-      // Cover: scale so image fills target, then centre-crop
-      const scale = Math.max(targetW / img.naturalWidth, targetH / img.naturalHeight);
-      const sw = targetW / scale, sh = targetH / scale;
-      const sx = (img.naturalWidth - sw) / 2, sy = (img.naturalHeight - sh) / 2;
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      // Contain: scale so entire image fits within target, no cropping
+      const scale = Math.min(targetW / img.naturalWidth, targetH / img.naturalHeight);
+      const dw = Math.round(img.naturalWidth * scale);
+      const dh = Math.round(img.naturalHeight * scale);
+      const dx = Math.round((targetW - dw) / 2);
+      const dy = Math.round((targetH - dh) / 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetW, targetH);
+      ctx.drawImage(img, dx, dy, dw, dh);
       canvas.toBlob(blob => {
         if (!blob) { reject(new Error('Canvas resize failed')); return; }
         const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
@@ -522,19 +546,17 @@ function renderList(items) {
                      : type === 'recurring_weekly' ? 'type-recurring'
                      : type === 'image'            ? 'type-image' : '';
     const hiddenClass = hidden ? 'is-hidden' : '';
+    const typeIcon   = type === 'control'         ? '&#128295;'
+                     : type === 'recurring_weekly' ? '&#128260;'
+                     : type === 'image'            ? '&#128444;' : '&#128172;';
 
     let detail = '';
     if (type === 'control') {
       const _isSeasonalMsg = a.id === 'thursday_darood_control' || a.id === 'friday_tafseer_control';
-      const _ctrlDefs = {
-        thursday_darood_control: { summer: 'DUROOD/SALAT-ALA-NABI GATHERING • THURSDAY AFTER MAGHRIB', winter: 'DUROOD/SALAT-ALA-NABI GATHERING • THURSDAY AFTER ISHA' },
-        friday_tafseer_control:  { summer: "TAFSEER OF THE QUR'AN • FRIDAY AFTER MAGHRIB", winter: "TAFSEER OF THE QUR'AN • FRIDAY AFTER ISHA" },
-      };
       let _msgDetail = '';
       if (_isSeasonalMsg) {
-        const d = _ctrlDefs[a.id];
-        _msgDetail = `<div class="mt-1 small"><span class="badge text-bg-warning me-1">Summer (BST)</span>${a.messageSummer ? `<span class="fst-italic">&ldquo;${a.messageSummer}&rdquo;</span>` : `<span class="text-muted fst-italic">&ldquo;${d.summer}&rdquo; <em>(built-in default)</em></span>`}</div>` +
-                     `<div class="mt-1 small"><span class="badge text-bg-primary me-1">Winter (GMT)</span>${a.messageWinter ? `<span class="fst-italic">&ldquo;${a.messageWinter}&rdquo;</span>` : `<span class="text-muted fst-italic">&ldquo;${d.winter}&rdquo; <em>(built-in default)</em></span>`}</div>`;
+        _msgDetail = `<div class="mt-1 small"><span class="badge text-bg-warning me-1">Summer (BST)</span>${a.messageSummer ? `<span class="fst-italic">&ldquo;${a.messageSummer}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>` +
+                     `<div class="mt-1 small"><span class="badge text-bg-primary me-1">Winter (GMT)</span>${a.messageWinter ? `<span class="fst-italic">&ldquo;${a.messageWinter}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>`;
       } else if (a.message) {
         _msgDetail = `<div class="mt-1 small fst-italic">&ldquo;${a.message}&rdquo;</div>`;
       }
@@ -594,21 +616,21 @@ function renderList(items) {
     const hideBtnClass = hidden ? 'btn-outline-success' : 'btn-outline-secondary';
 
     return `
-      <div class="card mb-2 ann-card ${typeClass} ${hiddenClass}">
+      <div class="card mb-2 ann-card ${typeClass} ${hiddenClass}" data-type="${type}" data-search="${(a.id + ' ' + (a.message || '') + ' ' + (a.description || '')).toLowerCase()}">
         <div class="card-body py-2">
           <div class="d-flex justify-content-between align-items-start gap-2">
             <div style="min-width:0">
               <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
-                <span class="badge bg-secondary">${type}</span>
-                <strong>${a.id}</strong>
+                <span class="badge bg-secondary type-icon">${typeIcon}</span>
+                <strong class="ann-id">${a.id}</strong>
                 <span class="ms-auto">${status}</span>
               </div>
               <div class="small">${detail}</div>
             </div>
             <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end ms-2">
-              <button class="btn btn-sm btn-outline-primary" onclick="openEdit(${idx})">Edit</button>
-              <button class="btn btn-sm ${hideBtnClass}" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteAnn(${idx})">Delete</button>
+              <button class="btn btn-sm btn-outline-primary py-0" onclick="openEdit(${idx})">&#9998; Edit</button>
+              <button class="btn btn-sm ${hideBtnClass} py-0" onclick="toggleHide(${idx})">${hideBtnLabel}</button>
+              <button class="btn btn-sm btn-outline-danger py-0" onclick="deleteAnn(${idx})">&#10005;</button>
             </div>
           </div>
         </div>
@@ -616,6 +638,31 @@ function renderList(items) {
   }).join('');
 
   document.getElementById('annList').innerHTML = html;
+  filterList();
+}
+
+// ─── Filter ───────────────────────────────────────────────────────────────────
+let _activeFilter = 'all';
+function setFilter(f) {
+  _activeFilter = f;
+  document.querySelectorAll('#filterTabs .filter-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.filter === f);
+  });
+  filterList();
+}
+function filterList() {
+  const q = (document.getElementById('filterSearch')?.value || '').toLowerCase().trim();
+  let shown = 0, total = 0;
+  document.querySelectorAll('#annList .ann-card').forEach(card => {
+    total++;
+    const typeMatch = _activeFilter === 'all' || card.dataset.type === _activeFilter;
+    const textMatch = !q || (card.dataset.search || '').includes(q);
+    const visible   = typeMatch && textMatch;
+    card.style.display = visible ? '' : 'none';
+    if (visible) shown++;
+  });
+  const countEl = document.getElementById('filterCount');
+  if (countEl && total) countEl.textContent = `${shown}\u202f/\u202f${total}`;
 }
 
 // ─── Add text ────────────────────────────────────────────────────────────────

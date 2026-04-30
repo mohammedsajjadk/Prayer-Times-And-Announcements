@@ -111,6 +111,8 @@
         <a class="nav-link" href="#sec-fix-time">2. Fix a Wrong Time</a>
         <a class="nav-link" href="#sec-text-ann">3. Add a Text Announcement</a>
         <a class="nav-link" href="#sec-image-ann">4. Add an Image Poster</a>
+        <a class="nav-link" href="#sec-seasonal-images" style="padding-left:1.25rem">&#x21b3; 4a. Seasonal poster images</a>
+        <a class="nav-link" href="#sec-seasonal-messages" style="padding-left:1.25rem">&#x21b3; 4b. Seasonal control messages</a>
         <a class="nav-link" href="#sec-suppress">5. Suppress a Recurring Event</a>
         <a class="nav-link" href="#sec-hide">6. Hide an Announcement</a>
         {% if mosque.parserFormat == 'tralee' %}
@@ -510,9 +512,39 @@ Thu	30	4:05	5:51	13:24	17:27	20:53	22:32
           </tbody>
         </table>
         <div class="step"><span class="step-badge">4</span><div class="step-body">Click <strong>Upload &amp; Save to GitHub</strong> &mdash; image uploads to GitHub first, then the announcement is saved. A green toast confirms success.</div></div>
+
+        <h3>Resize option</h3>
+        <p>When you select an image file, a <strong>Resize to 1320 &times; 1717 px</strong> checkbox appears (checked by default). This scales the image to fit within those dimensions &mdash; no cropping; any unused space is filled with white. The resulting file is saved as a JPEG at high quality.</p>
+        <p class="text-muted small">Uncheck the box to upload the original image without any resizing.</p>
       </section>
 
-      <!-- ── 5. Suppress periods ──────────────────────────────────────────── -->
+      <!-- ── 4a. Seasonal images ─────────────────────────────────────────── -->
+      <section class="help-section" id="sec-seasonal-images">
+        <h2>4a. Seasonal Poster Images for Recurring Announcements</h2>
+        <p>Recurring weekly announcements can show a <strong>different poster image in Summer (BST)</strong> vs <strong>Winter (GMT)</strong>. This is useful when e.g. a Tafseer class meets at a different time of day depending on the season.</p>
+        <h3>How it works</h3>
+        <ul>
+          <li>If <code>imagesSummer</code> is set, it shows during BST (late March &rarr; late October).</li>
+          <li>If <code>imagesWinter</code> is set, it shows during GMT (late October &rarr; late March).</li>
+          <li>If only one is set, the other season falls back to the standard <code>images</code> array.</li>
+        </ul>
+        <h3>Setting seasonal images via the UI</h3>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.announcementsManage }}">Announcements</a> and find the recurring weekly entry (e.g. <code>tafseer_friday_recurring</code>).</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Click <strong>&#9998; Edit</strong>. The modal shows an <strong>Images</strong> section with two rows: &#9728; Summer (BST) and &#10052; Winter (GMT), each with a current thumbnail and a &ldquo;Replace&rdquo; file picker.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Upload a new file in either row. Leave the other unchanged. Click <strong>Save to GitHub</strong>.</div></div>
+        <p class="text-muted small">The list card also shows &#9728; Summer and &#10052; Winter thumbnail badges so you can confirm which image is set for each season at a glance.</p>
+      </section>
+
+      <!-- ── 4b. Seasonal control messages ──────────────────────────────── -->
+      <section class="help-section" id="sec-seasonal-messages">
+        <h2>4b. Seasonal Messages for Darūd &amp; Tafseer Controls</h2>
+        <p>Two control entries &mdash; <code>thursday_darood_control</code> and <code>friday_tafseer_control</code> &mdash; automatically display <strong>AFTER MAGHRIB</strong> during Summer (BST) and <strong>AFTER ISHA</strong> during Winter (GMT), using built-in defaults. You can override these with custom text.</p>
+        <h3>Customising the seasonal message</h3>
+        <div class="step"><span class="step-badge">1</span><div class="step-body">Open <a href="{{ mosque.announcementsManage }}">Announcements</a> and find the control entry.</div></div>
+        <div class="step"><span class="step-badge">2</span><div class="step-body">Click <strong>&#9998; Edit</strong>. Two text areas appear: <strong>&#9728; Summer (BST)</strong> and <strong>&#10052; Winter (GMT)</strong>. Each placeholder shows the built-in default so you know what you're overriding.</div></div>
+        <div class="step"><span class="step-badge">3</span><div class="step-body">Type a custom message in one or both fields. Leave blank to keep the built-in seasonal default. Click <strong>Save to GitHub</strong>.</div></div>
+        <p class="text-muted small">The list card shows both the Summer and Winter message (or notes &ldquo;built-in default&rdquo; if no override is set).</p>
+      </section>
       <section class="help-section" id="sec-suppress">
         <h2>5. Cancel a Recurring Event Temporarily</h2>
         <p>If a regular class (e.g. <em>Quran class every Tuesday</em>) is cancelled for specific dates, use a Suppress Period instead of deleting the announcement.</p>

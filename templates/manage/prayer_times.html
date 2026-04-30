@@ -12,6 +12,14 @@
     body { background: #f5f5f5; }
     .navbar-brand { font-weight: 700; }
     .table th { white-space: nowrap; }
+    /* Today row + prayer cell highlights */
+    .row-today td { background: #fffbe6 !important; border-top: 2px solid #ffe58f !important; border-bottom: 2px solid #ffe58f !important; }
+    .cell-active { background: #d4edda !important; font-weight: 700; color: #155724 !important; }
+    .cell-jamaah-upcoming { background: #fff3cd !important; font-weight: 700; color: #856404 !important; }
+    .cell-jamaah-past { color: #adb5bd !important; text-decoration: line-through; }
+    .cell-next { background: #cce5ff !important; font-weight: 700; color: #004085 !important; }
+    .pt-legend { font-size: .78rem; }
+    .pt-legend .legend-dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 2px; margin-right: .25rem; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -47,6 +55,15 @@
       <small class="text-muted">{{ mosque.displayName }}</small>
     </div>
     <button class="btn btn-primary" onclick="toggleAddPanel()">&#43; Add Month</button>
+  </div>
+
+  <!-- Prayer highlight legend -->
+  <div class="d-flex flex-wrap gap-3 justify-content-end mb-2 pt-legend text-muted">
+    <span><span class="legend-dot" style="background:#d4edda;border:1px solid #b1dfbb"></span>Prayer begun</span>
+    <span><span class="legend-dot" style="background:#fff3cd;border:1px solid #ffeeba"></span>Jamaah upcoming</span>
+    <span><span class="legend-dot" style="background:#f8f9fa;border:1px solid #dee2e6"></span>Jamaah passed</span>
+    <span><span class="legend-dot" style="background:#cce5ff;border:1px solid #b8daff"></span>Next prayer</span>
+    <span><span class="legend-dot" style="background:#fffbe6;border:1px solid #ffe58f"></span>Today</span>
   </div>
 
   <!-- Add Month panel -->
@@ -321,6 +338,7 @@ function renderMonths(rows) {
   }).join('');
 
   container.innerHTML = html;
+  highlightCurrentDay();
 }
 
 // ─── Spreadsheet parser (mirrors prayer_time_parser.py) ──────────────────────
@@ -657,7 +675,58 @@ function toggleAddPanel() {
   const p = document.getElementById('addPanel');
   p.style.display = p.style.display === 'none' ? '' : 'none';
 }
+// ─── Today / prayer highlighting ────────────────────────────────────────────────────
+function _isIrelandDST(d) {
+  function lastSun(y, m) {
+    const t = new Date(Date.UTC(y, m, 31, 1)); t.setUTCDate(31 - (t.getUTCDay() + 7) % 7); return t;
+  }
+  return d >= lastSun(d.getUTCFullYear(), 2) && d < lastSun(d.getUTCFullYear(), 9);
+}
 
+function highlightCurrentDay() {
+  const now = new Date();
+  const offset = _isIrelandDST(now) ? 1 : 0;
+  const irish  = new Date(now.getTime() + offset * 3600000);
+  const todayM = irish.getUTCMonth() + 1;   // 1-based month
+  const todayD = irish.getUTCDate();
+  const nowMin = irish.getUTCHours() * 60 + irish.getUTCMinutes();
+
+  // col indices (0-based in <td> list): Date=0, FajrB=1, Sunrise=2, ZohrB=3, AsarB=4, MagribB=5, IshaB=6
+  //                                     FajrJ=7, ZohrJ=8, AsarJ=9, MagribJ=10, IshaJ=11, Edit=12
+  const prayers = [
+    { bIdx: 1, jIdx: 7  },
+    { bIdx: 3, jIdx: 8  },
+    { bIdx: 4, jIdx: 9  },
+    { bIdx: 5, jIdx: 10 },
+    { bIdx: 6, jIdx: 11 },
+  ];
+  const toMin = s => { if (!s || !s.includes(':')) return null; const [h,m]=s.split(':'); return parseInt(h)*60+parseInt(m); };
+
+  document.querySelectorAll('#monthList .card').forEach(card => {
+    const hdrText = card.querySelector('.card-header strong')?.textContent || '';
+    const mName   = hdrText.split(/\s/)[0];
+    if (MONTH_NAMES.indexOf(mName) !== todayM) return;
+    card.querySelectorAll('tbody tr').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (!cells.length) return;
+      if (parseInt(cells[0].textContent.trim()) !== todayD) return;
+      tr.classList.add('row-today');
+      let curBIdx = -1, curJIdx = -1, nxtBIdx = -1;
+      for (const p of prayers) {
+        const bMin = toMin(cells[p.bIdx]?.textContent.trim());
+        if (bMin === null) continue;
+        if (bMin <= nowMin) { curBIdx = p.bIdx; curJIdx = p.jIdx; }
+        else if (nxtBIdx < 0) { nxtBIdx = p.bIdx; }
+      }
+      if (curBIdx >= 0) {
+        cells[curBIdx].classList.add('cell-active');
+        const jMin = toMin(cells[curJIdx]?.textContent.trim());
+        if (jMin !== null) cells[curJIdx].classList.add(jMin > nowMin ? 'cell-jamaah-upcoming' : 'cell-jamaah-past');
+      }
+      if (nxtBIdx >= 0) cells[nxtBIdx].classList.add('cell-next');
+    });
+  });
+}
 // ─── Init ─────────────────────────────────────────────────────────────────────
 showTokenState();
 loadMonths();
