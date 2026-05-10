@@ -197,5 +197,30 @@
       "/static/images/monthly bayaan May 2026.jpg"
     ],
     "isSpecial": true
+  },
+  {
+    "id": "youth_programme_may_2026",
+    "scheduleWindows": [
+      {
+        "start": "2026-05-10T04:00:00+01:00",
+        "end": "2026-05-12T23:59:00+01:00"
+      },
+      {
+        "start": "2026-05-15T05:00:00+01:00",
+        "end": "2026-05-16T21:32:00+01:00"
+      }
+    ],
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/IMG-20260507-WA0000.jpg"
+    ],
+    "isSpecial": true
   }
 ]
