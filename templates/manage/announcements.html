@@ -201,7 +201,7 @@
             <input class="form-check-input" type="checkbox" id="img_resize" checked>
             <label class="form-check-label" for="img_resize">
               Resize to <strong>1320 &times; 1717 px</strong> before uploading
-              <small class="text-muted d-block">Scales to fit without cropping, centred on white background. Uncheck to upload the original image unchanged.</small>
+              <small class="text-muted d-block">Stretches to fill exactly — no white bars, no cropping. Uncheck to upload the original image unchanged.</small>
             </label>
           </div>
         </div>
@@ -528,15 +528,8 @@ function resizeImageToCanvas(file, targetW, targetH) {
       const canvas = document.createElement('canvas');
       canvas.width = targetW; canvas.height = targetH;
       const ctx = canvas.getContext('2d');
-      // Contain: scale so entire image fits within target, no cropping
-      const scale = Math.min(targetW / img.naturalWidth, targetH / img.naturalHeight);
-      const dw = Math.round(img.naturalWidth * scale);
-      const dh = Math.round(img.naturalHeight * scale);
-      const dx = Math.round((targetW - dw) / 2);
-      const dy = Math.round((targetH - dh) / 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, targetW, targetH);
-      ctx.drawImage(img, dx, dy, dw, dh);
+      // Stretch: fill the entire target canvas — no white bars, no cropping
+      ctx.drawImage(img, 0, 0, targetW, targetH);
       canvas.toBlob(blob => {
         if (!blob) { reject(new Error('Canvas resize failed')); return; }
         const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
@@ -1044,6 +1037,9 @@ function previewImage(inputId, previewId) {
   reader.readAsDataURL(file);
   if (previewId === 'img_preview') {
     document.getElementById('img_resize_row').style.display = file ? '' : 'none';
+  } else if (previewId === 'e_preview') {
+    const row = document.getElementById('e_resize_row');
+    if (row) row.style.display = file ? '' : 'none';
   }
 }
 
@@ -1146,6 +1142,15 @@ function openEdit(idx) {
           <label class="form-label">Replace image <small class="text-muted">(leave empty to keep current)</small></label>
           <input type="file" id="e_file" class="form-control" accept="image/*" onchange="previewImage('e_file','e_preview')">
           <img id="e_preview" class="img-preview mt-2" style="display:none">
+          <div id="e_resize_row" style="display:none" class="mt-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="e_resize" checked>
+              <label class="form-check-label" for="e_resize">
+                Resize to <strong>1320 &times; 1717 px</strong> before uploading
+                <small class="text-muted d-block">Stretches to fill exactly — no white bars, no cropping. Uncheck to upload the original image unchanged.</small>
+              </label>
+            </div>
+          </div>
         </div>
         <div class="col-12">
           <label class="form-label">Schedule Windows
@@ -1350,8 +1355,15 @@ async function saveEdit() {
     const file = document.getElementById('e_file').files[0];
     let images = a.images || [];
     if (file) {
+      const doResize = document.getElementById('e_resize')?.checked;
+      let fileToUpload = file;
+      if (doResize) {
+        showStatus('Resizing image to 1320×1717…', 'info');
+        try { fileToUpload = await resizeImageToCanvas(file, 1320, 1717); }
+        catch (e) { showStatus('Resize failed: ' + e.message, 'danger'); return; }
+      }
       showStatus('Uploading new image…', 'info');
-      try { images = [await uploadImage(file)]; }
+      try { images = [await uploadImage(fileToUpload)]; }
       catch (e) { showStatus('Image upload failed: ' + e.message, 'danger'); return; }
     }
     const windows = readWindowsFromContainer('e_windows');
