@@ -149,31 +149,6 @@
     ]
   },
   {
-    "id": "hajj_event_2026",
-    "scheduleWindows": [
-      {
-        "start": "2026-04-19T04:00:00+01:00",
-        "end": "2026-04-20T23:59:00+01:00"
-      },
-      {
-        "start": "2026-04-23T17:00:00+01:00",
-        "end": "2026-04-26T14:15:00+01:00"
-      }
-    ],
-    "type": "image",
-    "displayCondition": {
-      "frequency": 1,
-      "duration": 60,
-      "gapBetweenImages": 60,
-      "avoidJamaahTime": true,
-      "rotateImages": true
-    },
-    "images": [
-      "/static/images/Hajj Programme 2026.jpg"
-    ],
-    "isSpecial": true
-  },
-  {
     "id": "monthly bayaan May 2026",
     "scheduleWindows": [
       {
