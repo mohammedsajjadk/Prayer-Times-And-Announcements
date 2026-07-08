@@ -15,7 +15,7 @@ var announcements = {
   },
 
   friday_tafseer: function () {
-    return "TAFSEER OF THE QUR'AN • SURAH NAJM • FRIDAY AFTER ISHA";
+    return "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA";
   },
 
   thursday_darood_summer: function () {
@@ -23,7 +23,7 @@ var announcements = {
   },
 
   friday_tafseer_summer: function () {
-    return "TAFSEER OF THE QUR'AN • SURAH NAJM • FRIDAY AFTER MAGHRIB";
+    return "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER MAGHRIB";
   },
 
   clock_go_forward: function () {
