@@ -75,6 +75,8 @@ var displayState = {
 var announcementModule = {
   // Timer handle so we can cancel a pending cleanup when a new poster replaces the old one
   _slideshowCleanupTimer: null,
+  // Cache preloaded image objects to keep decoded assets warm for instant display
+  _imagePreloadCache: {},
 
   // Helper function to check if a control entry is hidden
   isControlHidden: function(controlId) {
@@ -113,6 +115,12 @@ var announcementModule = {
   },
 
   init: function () {
+    // Warm critical poster images immediately to avoid first-display delays.
+    this.preloadImages([
+      '/static/images/Adhkar1.jpg',
+      '/static/images/Adhkar2.jpg'
+    ]);
+
     // Load dynamic announcements when the page loads
     this.loadDynamicAnnouncements();
 
@@ -136,6 +144,25 @@ var announcementModule = {
             "Loaded dynamic announcements:",
             dynamicAnnouncements.length
           );
+
+          // Preload all configured image announcements so switching posters is immediate.
+          var allImages = [];
+          for (var i = 0; i < dynamicAnnouncements.length; i++) {
+            var announcement = dynamicAnnouncements[i];
+            if (!announcement) {
+              continue;
+            }
+            if (Array.isArray(announcement.images)) {
+              allImages = allImages.concat(announcement.images);
+            }
+            if (Array.isArray(announcement.imagesSummer)) {
+              allImages = allImages.concat(announcement.imagesSummer);
+            }
+            if (Array.isArray(announcement.imagesWinter)) {
+              allImages = allImages.concat(announcement.imagesWinter);
+            }
+          }
+          this.preloadImages(allImages);
         } else {
           console.error("Invalid announcements data format:", data);
           dynamicAnnouncements = [];
@@ -150,6 +177,35 @@ var announcementModule = {
         // Still attempt to update announcements with default values
         this.updateAnnouncement();
       });
+  },
+
+  preloadImages: function (imagePaths) {
+    if (!Array.isArray(imagePaths) || imagePaths.length === 0) {
+      return;
+    }
+
+    var uniquePaths = [];
+    for (var i = 0; i < imagePaths.length; i++) {
+      var path = imagePaths[i];
+      if (typeof path === 'string' && path.length > 0 && uniquePaths.indexOf(path) === -1) {
+        uniquePaths.push(path);
+      }
+    }
+
+    for (var j = 0; j < uniquePaths.length; j++) {
+      var imagePath = uniquePaths[j];
+      if (this._imagePreloadCache[imagePath]) {
+        continue;
+      }
+
+      var img = new Image();
+      img.decoding = 'async';
+      if ('fetchPriority' in img) {
+        img.fetchPriority = imagePath.indexOf('Adhkar') !== -1 ? 'high' : 'auto';
+      }
+      img.src = imagePath;
+      this._imagePreloadCache[imagePath] = img;
+    }
   },
 
   // Find active announcement from the dynamic list based on current date/time
@@ -1130,6 +1186,9 @@ var announcementModule = {
   // Display a single image for a specified duration
   displaySingleImage: function (imagePath, duration) {
     console.log("DEBUG: displaySingleImage called for:", imagePath, "duration:", duration);
+
+    // Ensure target image is already requested before constructing the slideshow UI.
+    this.preloadImages([imagePath]);
     
     // Check if there's already a slideshow running with the same image
     var existingSlideshow = document.querySelector(
@@ -1236,6 +1295,11 @@ var announcementModule = {
 
     // Create the image element
     var imgElement = document.createElement("img");
+    imgElement.loading = "eager";
+    imgElement.decoding = "async";
+    if ('fetchPriority' in imgElement) {
+      imgElement.fetchPriority = imagePath.indexOf('Adhkar') !== -1 ? 'high' : 'auto';
+    }
     imgElement.src = imagePath;
     imgElement.style.maxWidth = "100%";
     imgElement.style.maxHeight = "100%";
