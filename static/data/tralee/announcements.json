@@ -5,7 +5,13 @@
     "description": "Controls whether Friday Tafseer announcements are shown",
     "hide": false,
     "messageSummer": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER MAGHRIB",
-    "messageWinter": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA"
+    "messageWinter": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA",
+    "suspendPeriods": [
+      {
+        "start": "2026-07-14T09:00:00+01:00",
+        "end": "2026-07-19T23:59:00+01:00"
+      }
+    ]
   },
   {
     "id": "thursday_darood_control",
