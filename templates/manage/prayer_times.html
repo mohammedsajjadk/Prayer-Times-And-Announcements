@@ -247,7 +247,7 @@ async function fetchRows() {
 async function pruneOldMonths(rows) {
   const now = new Date();
   const cur = now.getMonth() + 1;
-  const keep = new Set([cur, (cur % 12) + 1, ((cur + 1) % 12) + 1]);
+  const keep = new Set(Array.from({ length: 5 }, (_, i) => ((cur - 1 + i) % 12) + 1));
   const removed = [...new Set(rows.map(r => parseInt(r['MONTH'])))].filter(m => !keep.has(m));
   if (!removed.length) return;
   const removedNames = removed.map(m => MONTH_NAMES[m] || `Month ${m}`).join(', ');
