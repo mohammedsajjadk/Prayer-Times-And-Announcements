@@ -68,7 +68,7 @@
       "/static/images/Tafseer of the Quran.jpg"
     ],
     "isSpecial": true,
-    "hide": true,
+    "hide": false,
     "imagesSummer": [
       "/static/images/Tafseer of the Quran Maghrib.jpg"
     ],
