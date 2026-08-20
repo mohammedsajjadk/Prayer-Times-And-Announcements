@@ -130,30 +130,5 @@
         "end": "2026-07-20T23:59:00+01:00"
       }
     ]
-  },
-  {
-    "id": "wifi_receiver_apr2026",
-    "type": "image",
-    "displayCondition": {
-      "frequency": 1,
-      "duration": 60,
-      "gapBetweenImages": 60,
-      "avoidJamaahTime": true,
-      "rotateImages": true
-    },
-    "images": [
-      "/static/images/wifireceiver.jpg"
-    ],
-    "isSpecial": true,
-    "scheduleWindows": [
-      {
-        "start": "2026-04-02T09:00:00+01:00",
-        "end": "2026-04-08T23:59:00+01:00"
-      },
-      {
-        "start": "2026-04-10T03:00:00+01:00",
-        "end": "2026-04-12T23:59:00+01:00"
-      }
-    ]
   }
 ]
