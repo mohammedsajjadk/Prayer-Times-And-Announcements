@@ -11,7 +11,9 @@
     "id": "thursday_darood_control",
     "type": "control",
     "description": "Controls whether Thursday Darood announcements are shown",
-    "hide": false
+    "hide": false,
+    "messageSummer": "DUROOD/SALAT-ALA-NABI صلى الله عليه وسلم GATHERING • THURSDAY AFTER ISHA",
+    "messageWinter": "DUROOD/SALAT-ALA-NABI صلى الله عليه وسلم GATHERING • THURSDAY AFTER ISHA"
   },
   {
     "id": "clocks_forward_rolling_notice",
