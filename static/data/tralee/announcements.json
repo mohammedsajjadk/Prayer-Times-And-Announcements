@@ -10,13 +10,13 @@
       {
         "dayOfWeek": 4,
         "summer": {
-          "startReference": "fajrBeginning",
+          "startReference": "fajrJamaah",
           "startOffset": -30,
           "endReference": "endOfDay",
           "endOffset": 0
         },
         "winter": {
-          "startReference": "fajrBeginning",
+          "startReference": "fajrJamaah",
           "startOffset": -30,
           "endReference": "endOfDay",
           "endOffset": 0
