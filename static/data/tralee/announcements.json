@@ -36,15 +36,15 @@
         "dayOfWeek": 4,
         "summer": {
           "startReference": "fajrBeginning",
-          "startOffset": 0,
-          "endReference": "magribJamaah",
-          "endOffset": 5
+          "startOffset": -30,
+          "endReference": "ishaJamaah",
+          "endOffset": 15
         },
         "winter": {
           "startReference": "fajrBeginning",
-          "startOffset": 0,
+          "startOffset": -30,
           "endReference": "ishaJamaah",
-          "endOffset": 5
+          "endOffset": 14
         }
       }
     ]
