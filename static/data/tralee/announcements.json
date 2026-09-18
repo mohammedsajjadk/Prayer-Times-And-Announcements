@@ -5,7 +5,19 @@
     "description": "Controls whether Friday Tafseer announcements are shown",
     "hide": false,
     "messageSummer": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA",
-    "messageWinter": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA"
+    "messageWinter": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA",
+    "displayRules": [
+      {
+        "dayOfWeek": 4,
+        "summer": { "startReference": "magribJamaah", "startOffset": 6, "endReference": "endOfDay" },
+        "winter": { "startReference": "ishaJamaah", "startOffset": 6, "endReference": "endOfDay" }
+      },
+      {
+        "dayOfWeek": 5,
+        "summer": { "startReference": "startOfDay", "endReference": "magribJamaah", "endOffset": 10 },
+        "winter": { "startReference": "startOfDay", "endReference": "ishaJamaah", "endOffset": 10 }
+      }
+    ]
   },
   {
     "id": "thursday_darood_control",
@@ -13,7 +25,14 @@
     "description": "Controls whether Thursday Darood announcements are shown",
     "hide": false,
     "messageSummer": "DUROOD/SALAT-ALA-NABI صلى الله عليه وسلم GATHERING • THURSDAY AFTER ISHA",
-    "messageWinter": "DUROOD/SALAT-ALA-NABI صلى الله عليه وسلم GATHERING • THURSDAY AFTER ISHA"
+    "messageWinter": "DUROOD/SALAT-ALA-NABI صلى الله عليه وسلم GATHERING • THURSDAY AFTER ISHA",
+    "displayRules": [
+      {
+        "dayOfWeek": 4,
+        "summer": { "startReference": "fajrBeginning", "startOffset": 0, "endReference": "magribJamaah", "endOffset": 5 },
+        "winter": { "startReference": "fajrBeginning", "startOffset": 0, "endReference": "ishaJamaah", "endOffset": 5 }
+      }
+    ]
   },
   {
     "id": "clocks_forward_rolling_notice",

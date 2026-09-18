@@ -114,6 +114,62 @@ var announcementModule = {
     return false;
   },
 
+  // Data-driven control timing: match displayRules on control entries
+  _matchControlDisplayRule: function (dayOfWeek, currentTime, isIrishSummerTime) {
+    if (!Array.isArray(dynamicAnnouncements)) return null;
+
+    var seasonKey = isIrishSummerTime ? "summer" : "winter";
+    var self = this;
+
+    for (var i = 0; i < dynamicAnnouncements.length; i++) {
+      var entry = dynamicAnnouncements[i];
+      if (entry.type !== "control" || !entry.displayRules || !entry.displayRules.length) continue;
+      if (self.isControlHidden(entry.id)) continue;
+
+      for (var j = 0; j < entry.displayRules.length; j++) {
+        var rule = entry.displayRules[j];
+        if (rule.dayOfWeek !== dayOfWeek) continue;
+
+        var timing = rule[seasonKey];
+        if (!timing) continue;
+
+        var startTime =
+          timing.startReference === "startOfDay"
+            ? 1
+            : self.getPrayerTimeMinutes(timing.startReference) +
+              (timing.startOffset || 0);
+        var endTime =
+          timing.endReference === "endOfDay"
+            ? 23 * 60 + 59
+            : self.getPrayerTimeMinutes(timing.endReference) +
+              (timing.endOffset || 0);
+
+        if (currentTime >= startTime && currentTime < endTime) {
+          // Resolve message: seasonal override → generic override → built-in default
+          if (isIrishSummerTime && entry.messageSummer)
+            return { message: entry.messageSummer };
+          if (!isIrishSummerTime && entry.messageWinter)
+            return { message: entry.messageWinter };
+          if (entry.message) return { message: entry.message };
+
+          // Fallback to built-in defaults
+          var defaults = {
+            thursday_darood_control: isIrishSummerTime
+              ? announcements.thursday_darood_summer
+              : announcements.thursday_darood,
+            friday_tafseer_control: isIrishSummerTime
+              ? announcements.friday_tafseer_summer
+              : announcements.friday_tafseer,
+          };
+          var fn = defaults[entry.id];
+          return { message: fn ? fn() : announcements.default };
+        }
+      }
+    }
+
+    return null;
+  },
+
   init: function () {
     // Warm critical poster images immediately to avoid first-display delays.
     this.preloadImages([
@@ -660,64 +716,15 @@ var announcementModule = {
         console.log("DEBUG: Created imageData with schedule:", imageData.schedule ? imageData.schedule.length : 'undefined', "items");
       }
     }
-    // If no dynamic announcement, use standard recurring announcements
+    // If no dynamic announcement, check control display rules
     else {
-      // Helper: resolve message from control entry (falls back to hardcoded default)
-      var self = this;
-      function _controlMsg(controlId, defaultFn) {
-        var entry = Array.isArray(dynamicAnnouncements) && dynamicAnnouncements.find(function(a) {
-          return a.id === controlId && a.type === 'control';
-        });
-        if (!entry) return defaultFn();
-        if (isIrishSummerTime && entry.messageSummer) return entry.messageSummer;
-        if (!isIrishSummerTime && entry.messageWinter) return entry.messageWinter;
-        if (entry.message) return entry.message;  // backwards compat
-        return defaultFn();
-      }
-
-      // Regular announcements logic
-      if (isIrishSummerTime) {
-        if (!this.isControlHidden("thursday_darood_control") &&
-          dayOfWeek === 4 &&
-          currentTime >= fajrTime &&
-          currentTime < magribJamaahTime + 5
-        ) {
-          // Thursday
-          message = _controlMsg('thursday_darood_control', announcements.thursday_darood_summer);
-        }
-        else if (!this.isControlHidden("friday_tafseer_control") && dayOfWeek === 4 && currentTime >= magribJamaahTime + 6 && currentTime < (23 * 60 + 59)) {
-          // Thursday After Maghrib
-          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer_summer);
-        }
-        else if (!this.isControlHidden("friday_tafseer_control") && dayOfWeek === 5 && currentTime > (0 * 60 + 1) && currentTime < magribJamaahTime + 10) {
-          // Friday
-          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer_summer);
-        }
-      } else {
-        // Winter time rules
-        if (!this.isControlHidden("thursday_darood_control") &&
-          dayOfWeek === 4 &&
-          currentTime >= fajrTime &&
-          currentTime < ishaJamaahTime + 5
-        ) {
-          // Thursday
-          message = _controlMsg('thursday_darood_control', announcements.thursday_darood);
-        } 
-        else if (!this.isControlHidden("friday_tafseer_control") &&
-          dayOfWeek === 4 &&
-          currentTime >= ishaJamaahTime + 6 &&
-          currentTime < 23 * 60 + 59
-        ) {
-          // Thursday After Isha
-          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
-        } else if (!this.isControlHidden("friday_tafseer_control") &&
-          dayOfWeek === 5 &&
-          currentTime > 0 * 60 + 1 &&
-          currentTime < ishaJamaahTime + 10
-        ) {
-          // Friday
-          message = _controlMsg('friday_tafseer_control', announcements.friday_tafseer);
-        }
+      var controlMatch = this._matchControlDisplayRule(
+        dayOfWeek,
+        currentTime,
+        isIrishSummerTime
+      );
+      if (controlMatch) {
+        message = controlMatch.message;
       }
     }
 

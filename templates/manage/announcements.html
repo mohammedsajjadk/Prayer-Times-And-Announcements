@@ -310,10 +310,11 @@ const REF_LABELS = {
   ishaJamaah:       'Isha Jamaah',
 };
 
-// "magribJamaah", 12  →  "Maghrib Jamaah +12 min"  (zero offset omitted)
+// "magribJamaah", 12  →  "Maghrib Jamaah +12 min"  (zero offset omitted; negative handled)
 function fmtRef(ref, offset) {
   const label = REF_LABELS[ref] || ref;
-  return (offset != null && offset !== 0) ? `${label} +${offset} min` : label;
+  if (offset == null || offset === 0) return label;
+  return offset > 0 ? `${label} +${offset} min` : `${label} ${offset} min`;
 }
 
 // seasonalTiming object → HTML rows  ("All year: ..." when both seasons match)
@@ -637,10 +638,14 @@ function renderList(items) {
           `<div class="mt-1 small"><span class="badge text-bg-warning text-dark me-1">Summer (BST)</span>${a.messageSummer ? `<span class="fst-italic">&ldquo;${a.messageSummer}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>` +
           `<div class="mt-1 small"><span class="badge text-bg-primary me-1">Winter (GMT)</span>${a.messageWinter ? `<span class="fst-italic">&ldquo;${a.messageWinter}&rdquo;</span>` : `<span class="text-muted fst-italic">(built-in default)</span>`}</div>`;
       }
+      const _displayRulesDetail = a.displayRules && a.displayRules.length
+        ? `<div class="mt-2"><div class="small fw-semibold text-secondary mb-1">Display Rules</div>${fmtDisplayRules(a.displayRules)}</div>`
+        : '';
       detail = `
         ${_activeMsg}
         <div class="text-muted small">${a.description || ''}</div>
         ${_msgSeasonDetail}
+        ${_displayRulesDetail}
         ${fmtWindows(a.scheduleWindows, 'Shown only within')}
         ${fmtWindows(a.suspendPeriods, 'Suppressed during', 'text-bg-warning text-dark', 'text-bg-secondary')}`;
 
@@ -757,7 +762,12 @@ function rowName(a) {
 
 function rowWhen(a) {
   const type = a.type || 'text';
-  if (type === 'control') return '';
+  if (type === 'control') {
+    if (a.displayRules && a.displayRules.length) {
+      return a.displayRules.map(r => DAYS[r.dayOfWeek] || r.dayOfWeek).join(', ');
+    }
+    return '';
+  }
   if (type === 'recurring_weekly') return 'Every ' + (DAYS[a.dayOfWeek] || a.dayOfWeek);
   // image or text — prefer scheduleWindows, fallback to startDate/endDate
   if (a.scheduleWindows && a.scheduleWindows.length) {
@@ -1009,6 +1019,143 @@ function readWindowsFromContainer(containerId) {
     start: `${row.querySelector('.win-start-date').value}T${row.querySelector('.win-start-time').value || '00:00'}:00+01:00`,
     end:   `${row.querySelector('.win-end-date').value}T${row.querySelector('.win-end-time').value || '23:59'}:00+01:00`,
   })).filter(w => w.start.substring(0, 10) && w.end.substring(0, 10));
+}
+
+// ─── Display Rules helpers (for control entries) ──────────────────────────────
+const PRAYER_REFS = [
+  { value: 'startOfDay',     label: 'Start of Day (00:01)' },
+  { value: 'fajrBeginning',  label: 'Fajr Start' },
+  { value: 'fajrJamaah',     label: 'Fajr Jamaah' },
+  { value: 'zohrBeginning',  label: 'Dhuhr Start' },
+  { value: 'zohrJamaah',     label: 'Dhuhr Jamaah' },
+  { value: 'asrBeginning',   label: 'Asr Start' },
+  { value: 'asrJamaah',      label: 'Asr Jamaah' },
+  { value: 'magribBeginning', label: 'Maghrib Start' },
+  { value: 'magribJamaah',   label: 'Maghrib Jamaah' },
+  { value: 'ishaBeginning',  label: 'Isha Start' },
+  { value: 'ishaJamaah',     label: 'Isha Jamaah' },
+  { value: 'endOfDay',       label: 'End of Day (23:59)' },
+];
+
+function _refOptions(selected) {
+  return PRAYER_REFS.map(r =>
+    `<option value="${r.value}"${r.value === selected ? ' selected' : ''}>${r.label}</option>`
+  ).join('');
+}
+
+function _displayRuleRowHtml(rule, ruleIdx) {
+  rule = rule || {};
+  const sum = rule.summer || {};
+  const win = rule.winter || {};
+  return `<div class="display-rule-row border rounded p-3 mb-2" data-rule-idx="${ruleIdx}">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong class="small">Rule ${ruleIdx + 1}</strong>
+      <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeDisplayRule(this)">&#10005; Remove</button>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4">
+        <label class="form-label form-label-sm">Day of week</label>
+        <select class="form-select form-select-sm dr-day">
+          ${DAYS.map((d, i) => `<option value="${i}"${rule.dayOfWeek === i ? ' selected' : ''}>${d}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-12"><span class="badge text-bg-warning text-dark">&#9728; Summer (BST)</span></div>
+      <div class="col-md-4">
+        <label class="form-label form-label-sm">From</label>
+        <select class="form-select form-select-sm dr-sum-start-ref">${_refOptions(sum.startReference || 'fajrBeginning')}</select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Offset (mins)</label>
+        <input type="number" class="form-control form-control-sm dr-sum-start-off" value="${sum.startOffset || 0}">
+      </div>
+      <div class="col-auto d-flex align-items-end pb-1"><span class="text-muted">&rarr;</span></div>
+      <div class="col-md-4">
+        <label class="form-label form-label-sm">To</label>
+        <select class="form-select form-select-sm dr-sum-end-ref">${_refOptions(sum.endReference || 'ishaJamaah')}</select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Offset (mins)</label>
+        <input type="number" class="form-control form-control-sm dr-sum-end-off" value="${sum.endOffset || 0}">
+      </div>
+    </div>
+    <div class="row g-2">
+      <div class="col-12"><span class="badge text-bg-primary">&#10052; Winter (GMT)</span></div>
+      <div class="col-md-4">
+        <label class="form-label form-label-sm">From</label>
+        <select class="form-select form-select-sm dr-win-start-ref">${_refOptions(win.startReference || 'fajrBeginning')}</select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Offset (mins)</label>
+        <input type="number" class="form-control form-control-sm dr-win-start-off" value="${win.startOffset || 0}">
+      </div>
+      <div class="col-auto d-flex align-items-end pb-1"><span class="text-muted">&rarr;</span></div>
+      <div class="col-md-4">
+        <label class="form-label form-label-sm">To</label>
+        <select class="form-select form-select-sm dr-win-end-ref">${_refOptions(win.endReference || 'ishaJamaah')}</select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Offset (mins)</label>
+        <input type="number" class="form-control form-control-sm dr-win-end-off" value="${win.endOffset || 0}">
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildDisplayRulesHtml(rules) {
+  if (!rules || !rules.length) return '';
+  return rules.map((r, i) => _displayRuleRowHtml(r, i)).join('');
+}
+
+function addDisplayRule(containerId) {
+  const container = document.getElementById(containerId);
+  const count = container.querySelectorAll('.display-rule-row').length;
+  if (count >= 7) { alert('Maximum 7 display rules allowed.'); return; }
+  container.insertAdjacentHTML('beforeend', _displayRuleRowHtml({}, count));
+}
+
+function removeDisplayRule(btn) {
+  const row = btn.closest('.display-rule-row');
+  row.remove();
+}
+
+function readDisplayRules(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('.display-rule-row')).map(row => ({
+    dayOfWeek: parseInt(row.querySelector('.dr-day').value, 10),
+    summer: {
+      startReference: row.querySelector('.dr-sum-start-ref').value,
+      startOffset:    parseInt(row.querySelector('.dr-sum-start-off').value, 10) || 0,
+      endReference:   row.querySelector('.dr-sum-end-ref').value,
+      endOffset:      parseInt(row.querySelector('.dr-sum-end-off').value, 10) || 0,
+    },
+    winter: {
+      startReference: row.querySelector('.dr-win-start-ref').value,
+      startOffset:    parseInt(row.querySelector('.dr-win-start-off').value, 10) || 0,
+      endReference:   row.querySelector('.dr-win-end-ref').value,
+      endOffset:      parseInt(row.querySelector('.dr-win-end-off').value, 10) || 0,
+    },
+  }));
+}
+
+// Format displayRules for detail view
+function fmtDisplayRules(rules) {
+  if (!rules || !rules.length) return '';
+  return rules.map(r => {
+    const day = DAYS[r.dayOfWeek] || r.dayOfWeek;
+    const sumRow = r.summer ? `${fmtRef(r.summer.startReference, r.summer.startOffset)} → ${fmtRef(r.summer.endReference, r.summer.endOffset)}` : '';
+    const winRow = r.winter ? `${fmtRef(r.winter.startReference, r.winter.startOffset)} → ${fmtRef(r.winter.endReference, r.winter.endOffset)}` : '';
+    let out = `<div class="mb-1 ps-2" style="border-left:3px solid #dee2e6"><strong class="small">${day}</strong>`;
+    if (sumRow === winRow) {
+      out += `<div class="text-muted small">All year: ${sumRow}</div>`;
+    } else {
+      if (sumRow) out += `<div class="small"><span class="badge text-bg-warning text-dark me-1">Summer</span>${sumRow}</div>`;
+      if (winRow) out += `<div class="small"><span class="badge text-bg-info me-1">Winter</span>${winRow}</div>`;
+    }
+    return out + '</div>';
+  }).join('');
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
@@ -1275,6 +1422,20 @@ function openEdit(idx) {
           <label class="form-label">Rolling message <small class="text-muted">(shown in announcement bar when this control is active)</small></label>
           <textarea id="e_ctrl_msg" class="form-control" rows="2" placeholder="Leave blank to use the built-in default message">${(a.message || '').replace(/</g, '&lt;')}</textarea>
         </div>`;
+    const _displayRulesHtml = _ctrlIsSeasonalEdit ? `
+        <div class="col-12">
+          <label class="form-label fw-semibold">Display Rules
+            <small class="text-muted fw-normal">(controls which days and times the rolling message is shown)</small>
+          </label>
+          <div class="alert alert-light py-2 small mb-2 border">
+            Each rule defines a <strong>day of the week</strong> and a <strong>time window</strong> relative to prayer times.
+            Use <em>negative offsets</em> to start/end <em>before</em> a prayer time (e.g. &minus;30 = 30 minutes before).
+            The message is shown when the current time matches <strong>any</strong> rule.
+          </div>
+          <div id="e_display_rules">${buildDisplayRulesHtml(a.displayRules || [])}</div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                  onclick="addDisplayRule('e_display_rules')">&#43; Add Rule</button>
+        </div>` : '';
     body = `
       <div class="row g-3">
         <div class="col-12">
@@ -1288,6 +1449,7 @@ function openEdit(idx) {
           <div class="form-text">Internal note about what this control entry toggles.</div>
         </div>
         ${_ctrlMsgEditHtml}
+        ${_displayRulesHtml}
         <div class="col-12">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="e_hide" ${a.hide ? 'checked' : ''}>
@@ -1444,6 +1606,13 @@ async function saveEdit() {
     } else {
       const ctrlMsg = document.getElementById('e_ctrl_msg').value.trim();
       if (ctrlMsg) { updated.message = ctrlMsg; } else { delete updated.message; }
+    }
+    // Display rules (prayer-time-relative day/time windows)
+    const rulesContainer = document.getElementById('e_display_rules');
+    if (rulesContainer) {
+      const rules = readDisplayRules('e_display_rules');
+      if (rules.length > 0) { updated.displayRules = rules; }
+      else { delete updated.displayRules; }
     }
     if (windows.length > 0) { updated.scheduleWindows = windows; }
     else { delete updated.scheduleWindows; }
