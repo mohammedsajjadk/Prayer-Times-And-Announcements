@@ -9,13 +9,18 @@
     "displayRules": [
       {
         "dayOfWeek": 4,
-        "summer": { "startReference": "magribJamaah", "startOffset": 6, "endReference": "endOfDay" },
-        "winter": { "startReference": "ishaJamaah", "startOffset": 6, "endReference": "endOfDay" }
-      },
-      {
-        "dayOfWeek": 5,
-        "summer": { "startReference": "startOfDay", "endReference": "magribJamaah", "endOffset": 10 },
-        "winter": { "startReference": "startOfDay", "endReference": "ishaJamaah", "endOffset": 10 }
+        "summer": {
+          "startReference": "fajrBeginning",
+          "startOffset": -30,
+          "endReference": "endOfDay",
+          "endOffset": 0
+        },
+        "winter": {
+          "startReference": "fajrBeginning",
+          "startOffset": -30,
+          "endReference": "endOfDay",
+          "endOffset": 0
+        }
       }
     ]
   },
@@ -29,8 +34,18 @@
     "displayRules": [
       {
         "dayOfWeek": 4,
-        "summer": { "startReference": "fajrBeginning", "startOffset": 0, "endReference": "magribJamaah", "endOffset": 5 },
-        "winter": { "startReference": "fajrBeginning", "startOffset": 0, "endReference": "ishaJamaah", "endOffset": 5 }
+        "summer": {
+          "startReference": "fajrBeginning",
+          "startOffset": 0,
+          "endReference": "magribJamaah",
+          "endOffset": 5
+        },
+        "winter": {
+          "startReference": "fajrBeginning",
+          "startOffset": 0,
+          "endReference": "ishaJamaah",
+          "endOffset": 5
+        }
       }
     ]
   },
