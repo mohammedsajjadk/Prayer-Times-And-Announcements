@@ -98,7 +98,7 @@
       "/static/images/Tafseer of the Quran Isha.jpg"
     ],
     "isSpecial": true,
-    "hide": false,
+    "hide": true,
     "imagesSummer": [
       "/static/images/Tafseer of the Quran Isha.jpg"
     ]
