@@ -8,18 +8,18 @@
     "messageWinter": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA",
     "displayRules": [
       {
-        "dayOfWeek": 4,
+        "dayOfWeek": 5,
         "summer": {
           "startReference": "fajrJamaah",
           "startOffset": -30,
-          "endReference": "endOfDay",
-          "endOffset": 0
+          "endReference": "ishaJamaah",
+          "endOffset": 15
         },
         "winter": {
           "startReference": "fajrJamaah",
           "startOffset": -30,
-          "endReference": "endOfDay",
-          "endOffset": 0
+          "endReference": "ishaJamaah",
+          "endOffset": 15
         }
       }
     ]
