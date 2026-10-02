@@ -690,6 +690,7 @@ var announcementModule = {
     // Check for any dynamic announcements (only if Adhkar is not active)
     var activeDynamicAnnouncement = this.getActiveDynamicAnnouncement(now);
     console.log("DEBUG: Active dynamic announcement:", activeDynamicAnnouncement);
+    var hasDynamicText = false;
     if (activeDynamicAnnouncement) {
       // Handle text announcement
       if (activeDynamicAnnouncement.textAnnouncement) {
@@ -698,6 +699,7 @@ var announcementModule = {
           announcements.default;
         isSpecialAnnouncement =
           activeDynamicAnnouncement.textAnnouncement.isSpecial;
+        hasDynamicText = true;
       }
 
       // Handle image announcement separately (can exist alongside text)
@@ -716,8 +718,10 @@ var announcementModule = {
         console.log("DEBUG: Created imageData with schedule:", imageData.schedule ? imageData.schedule.length : 'undefined', "items");
       }
     }
-    // If no dynamic announcement, check control display rules
-    else {
+
+    // Control display rules supply the rolling text when no dynamic text
+    // announcement claimed it — an active image announcement must not suppress it.
+    if (!hasDynamicText) {
       var controlMatch = this._matchControlDisplayRule(
         dayOfWeek,
         currentTime,
