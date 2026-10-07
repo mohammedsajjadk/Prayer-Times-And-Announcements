@@ -191,5 +191,30 @@
       "/static/images/38034.jpg"
     ],
     "isSpecial": true
+  },
+  {
+    "id": "towards_becoming_people_2026",
+    "scheduleWindows": [
+      {
+        "start": "2026-10-12T06:00:00+01:00",
+        "end": "2026-10-13T21:15:00+01:00"
+      },
+      {
+        "start": "2026-10-18T06:00:00+01:00",
+        "end": "2026-10-18T18:55:00+01:00"
+      }
+    ],
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/towards_becoming_people_of_good.jpg"
+    ],
+    "isSpecial": true
   }
 ]
