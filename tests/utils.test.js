@@ -3,6 +3,86 @@
  * Tests all utility functions for time manipulation and formatting
  */
 
+describe('Live Jumuah seasonal selection', () => {
+  const fs = require('fs');
+  const vm = require('vm');
+  const path = require('path');
+  const context = vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../static/js/utils.js'), 'utf8'), context);
+
+  test.each([
+    ['2026-10-23T12:44:59Z', '13:45'],
+    ['2026-10-23T12:45:00Z', '13:45'],
+    ['2026-10-23T13:09:59Z', '13:45'],
+    ['2026-10-23T13:10:00Z', '13:20'],
+    ['2026-10-25T00:59:59Z', '13:20'],
+    ['2026-10-25T01:00:00Z', '13:20'],
+    ['2026-10-30T13:20:00Z', '13:20'],
+    ['2026-12-31T23:59:59Z', '13:20'],
+    ['2027-01-01T00:00:00Z', '13:20'],
+    ['2027-03-26T13:19:59Z', '13:20'],
+    ['2027-03-26T13:20:00Z', '13:20'],
+    ['2027-03-26T13:39:59Z', '13:20'],
+    ['2027-03-26T13:40:00Z', '13:45'],
+    ['2027-03-28T00:59:59Z', '13:45'],
+    ['2027-03-28T01:00:00Z', '13:45'],
+    ['2027-04-02T12:45:00Z', '13:45'],
+    ['2027-07-01T00:00:00Z', '13:45'],
+    ['2028-03-24T13:40:00Z', '13:45'],
+    ['2028-10-27T13:10:00Z', '13:20'],
+    ['2026-10-23T14:09:59+01:00', '13:45'],
+    ['2026-10-23T09:10:00-04:00', '13:20'],
+  ])('%s selects %s', (instant, expected) => {
+    expect(context.dateUtils.getJumuahTime(new Date(instant))).toBe(expected);
+  });
+
+  test('uses configured times and transition thresholds', () => {
+    const settings = {
+      summer: '14:00', winter: '13:30',
+      springTransitionTime: '14:00', autumnTransitionTime: '14:30'
+    };
+    expect(context.dateUtils.getJumuahTime(new Date('2027-03-26T13:59:59Z'), settings)).toBe('13:30');
+    expect(context.dateUtils.getJumuahTime(new Date('2027-03-26T14:00:00Z'), settings)).toBe('14:00');
+    expect(context.dateUtils.getJumuahTime(new Date('2026-10-23T13:29:59Z'), settings)).toBe('14:00');
+    expect(context.dateUtils.getJumuahTime(new Date('2026-10-23T13:30:00Z'), settings)).toBe('13:30');
+  });
+
+  test('keeps clock DST separate from the next Jumuah schedule', () => {
+    expect(context.dateUtils.isIrelandDST(new Date('2026-10-23T13:10:00Z'))).toBe(true);
+    expect(context.dateUtils.isIrelandDST(new Date('2026-10-25T00:59:59Z'))).toBe(true);
+    expect(context.dateUtils.isIrelandDST(new Date('2026-10-25T01:00:00Z'))).toBe(false);
+    expect(context.dateUtils.isIrelandDST(new Date('2027-03-26T13:40:00Z'))).toBe(false);
+    expect(context.dateUtils.isIrelandDST(new Date('2027-03-28T00:59:59Z'))).toBe(false);
+    expect(context.dateUtils.isIrelandDST(new Date('2027-03-28T01:00:00Z'))).toBe(true);
+  });
+
+  test.each([
+    ['2026-10-23T13:09:59Z', '13:45', '1:45'],
+    ['2026-10-23T13:10:00Z', '13:20', '1:20'],
+    ['2027-03-26T13:39:59Z', '13:20', '1:20'],
+    ['2027-03-26T13:40:00Z', '13:45', '1:45'],
+  ])('updates live display and data-time at %s', (instant, expected, formatted) => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(instant));
+    try {
+      document.body.innerHTML = '<div class="jamaah"><div></div>' +
+        '<div class="prayer-time-value"></div>'.repeat(6) + '</div>';
+      context.Date = Date;
+      context.document = document;
+      context.window = { appSettings: { jumuah: { summer: '13:45', winter: '13:20' } } };
+      context.testMode = { enabled: false };
+      vm.runInContext(fs.readFileSync(path.join(__dirname, '../static/js/prayers.js'), 'utf8'), context);
+      context.prayerModule.updateJumuahTimes();
+      const element = document.querySelector('.jamaah .prayer-time-value:nth-child(7)');
+      expect(element.getAttribute('data-time')).toBe(expected);
+      expect(element.textContent).toBe(formatted);
+    } finally {
+      jest.useRealTimers();
+      delete context.Date;
+    }
+  });
+});
+
 describe('Time Utilities Module', () => {
 
   // Mock timeUtils object

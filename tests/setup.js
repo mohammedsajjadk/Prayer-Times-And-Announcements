@@ -8,7 +8,10 @@ const localStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-global.localStorage = localStorageMock;
+Object.defineProperty(global, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+});
 
 // Mock document methods
 Object.defineProperty(document, 'readyState', {

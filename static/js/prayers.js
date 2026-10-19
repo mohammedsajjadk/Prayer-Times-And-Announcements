@@ -199,14 +199,8 @@ var prayerModule = {
 
     var isFriday = currentDay === 5;
 
-    // Determine if it's Summer Time or Winter Time
-    var isIrishSummerTime = dateUtils.isIrelandDST(now);
-
-    // Set Jumuah time based on whether it's Summer Time or Winter Time
     var _jumuahCfg = (window.appSettings || DEFAULT_SETTINGS).jumuah;
-    var jumuahTime = isIrishSummerTime
-      ? (_jumuahCfg.summer || '13:45')
-      : (_jumuahCfg.winter || '13:20');
+    var jumuahTime = dateUtils.getJumuahTime(now, _jumuahCfg);
 
     // Get the Jumuah time element
     var jumuahElement = document.querySelector(".jamaah .prayer-time-value:nth-child(7)");

@@ -9,7 +9,10 @@ var DEFAULT_SETTINGS = {
     {h:0,m:0},{h:3,m:30},{h:6,m:30},{h:10,m:30},{h:12,m:30},
     {h:14,m:12},{h:16,m:30},{h:17,m:30},{h:18,m:30},{h:19,m:45},{h:21,m:15}
   ],
-  jumuah: { summer: '13:45', winter: '13:20' },
+  jumuah: {
+    summer: '13:45', winter: '13:20',
+    springTransitionTime: '13:40', autumnTransitionTime: '14:10'
+  },
   selectedTheme: 'theme1',
   labels: { column1: 'BEGINNING', column2: "JAMA'AH", beginningColumnSize: 'smaller' },
   adhkar: {
@@ -67,11 +70,10 @@ var app = {  // Initialize the application
 
     // Set initial Jumuah time based on Summer/Winter time on page load
     var now = testMode.enabled ? testMode.getMockDate() : new Date();
-    var isIrishSummerTime = dateUtils.isIrelandDST(now);
     var jumuahElement = document.querySelector(".jamaah .prayer-time-value:nth-child(7)");
     if (jumuahElement) {
       var _jCfg = (window.appSettings || DEFAULT_SETTINGS).jumuah;
-      var jumuahTime = isIrishSummerTime ? (_jCfg.summer || '13:45') : (_jCfg.winter || '13:20');
+      var jumuahTime = dateUtils.getJumuahTime(now, _jCfg);
       jumuahElement.setAttribute("data-time", jumuahTime);
       jumuahElement.textContent = timeUtils.formatTimeFor12Hour(jumuahTime);
     }

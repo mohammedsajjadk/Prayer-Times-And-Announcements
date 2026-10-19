@@ -76,8 +76,8 @@
     <div class="card-header"><strong>Jumu'ah Time</strong></div>
     <div class="card-body">
       <p class="text-muted small mb-3">
-        <strong>Summer (BST)</strong> = last Sunday of March → last Sunday of October.<br>
-        <strong>Winter (GMT)</strong> = last Sunday of October → last Sunday of March.
+        Seasonal Jumu'ah times switch after the final Friday prayer before each clock change.
+        Transition times use Irish/UK local time.
       </p>
       <div class="row g-3">
         <div class="col-md-4">
@@ -91,6 +91,14 @@
             <small class="text-muted d-block">Late Oct → Late Mar</small>
           </label>
           <input type="time" id="jumuah_winter" class="form-control" value="13:20">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="jumuah_spring_transition">Spring Friday switch time</label>
+          <input type="time" id="jumuah_spring_transition" class="form-control" value="13:40">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="jumuah_autumn_transition">Autumn Friday switch time</label>
+          <input type="time" id="jumuah_autumn_transition" class="form-control" value="14:10">
         </div>
       </div>
     </div>
@@ -299,6 +307,8 @@ function populateForm(s) {
   const j = s.jumuah || {};
   document.getElementById('jumuah_summer').value = j.summer || '13:45';
   document.getElementById('jumuah_winter').value = j.winter || '13:20';
+  document.getElementById('jumuah_spring_transition').value = j.springTransitionTime || '13:40';
+  document.getElementById('jumuah_autumn_transition').value = j.autumnTransitionTime || '14:10';
 
   // Theme
   selectThemeSwatch(s.selectedTheme || 'theme1');
@@ -387,6 +397,8 @@ function _validateAndBuildSettings() {
     jumuah: {
       summer: document.getElementById('jumuah_summer').value || '13:45',
       winter: document.getElementById('jumuah_winter').value || '13:20',
+      springTransitionTime: document.getElementById('jumuah_spring_transition').value || '13:40',
+      autumnTransitionTime: document.getElementById('jumuah_autumn_transition').value || '14:10',
     },
     selectedTheme: document.getElementById('sel_theme').value || 'theme1',
     labels: {

@@ -84,6 +84,23 @@ var domUtils = {
 
 // Date utility functions
 var dateUtils = {
+  getJumuahTime: function(date, settings) {
+    settings = settings || {};
+    var year = date.getUTCFullYear();
+    function transition(month, localTime, offset) {
+      var sunday = new Date(Date.UTC(year, month + 1, 0));
+      sunday.setUTCDate(sunday.getUTCDate() - sunday.getUTCDay());
+      var minutes = timeUtils.timeToMinutes(localTime);
+      return Date.UTC(year, month, sunday.getUTCDate() - 2,
+        0, minutes - offset * 60);
+    }
+    var spring = transition(2, settings.springTransitionTime || '13:40', 0);
+    var autumn = transition(9, settings.autumnTransitionTime || '14:10', 1);
+    return date.getTime() >= spring && date.getTime() < autumn
+      ? (settings.summer || '13:45')
+      : (settings.winter || '13:20');
+  },
+
   // Detect if Ireland is currently in DST (summer time)
   isIrelandDST: function(date) {
     // Ireland's DST starts at 1am UTC on the last Sunday in March

@@ -1,7 +1,9 @@
 {
   "jumuah": {
     "summer": "13:45",
-    "winter": "13:20"
+    "winter": "13:20",
+    "springTransitionTime": "13:40",
+    "autumnTransitionTime": "14:10"
   },
   "selectedTheme": "theme1",
   "labels": {
