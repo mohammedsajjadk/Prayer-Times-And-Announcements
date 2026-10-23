@@ -216,5 +216,26 @@
       "/static/images/towards_becoming_people_of_good.jpg"
     ],
     "isSpecial": true
+  },
+  {
+    "id": "clock_go_back_2026",
+    "scheduleWindows": [
+      {
+        "start": "2026-10-23T08:00:00+01:00",
+        "end": "2026-10-25T21:00:00+01:00"
+      }
+    ],
+    "type": "image",
+    "displayCondition": {
+      "frequency": 1,
+      "duration": 60,
+      "gapBetweenImages": 60,
+      "avoidJamaahTime": true,
+      "rotateImages": true
+    },
+    "images": [
+      "/static/images/clock_go_back_2026.jpg"
+    ],
+    "isSpecial": true
   }
 ]
