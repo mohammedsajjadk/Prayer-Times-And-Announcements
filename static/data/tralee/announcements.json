@@ -261,6 +261,7 @@
     "images": [
       "/static/images/51005.jpg"
     ],
-    "isSpecial": true
+    "isSpecial": true,
+    "hide": true
   }
 ]
