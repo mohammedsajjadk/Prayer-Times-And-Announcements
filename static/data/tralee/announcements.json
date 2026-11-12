@@ -3,9 +3,9 @@
     "id": "friday_tafseer_control",
     "type": "control",
     "description": "Controls whether Friday Tafseer announcements are shown",
-    "hide": false,
-    "messageSummer": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA",
-    "messageWinter": "TAFSEER OF THE QUR'AN • SURAH QAMAR • FRIDAY AFTER ISHA",
+    "hide": true,
+    "messageSummer": "TAFSEER OF THE QUR'AN • SURAH HADEED • FRIDAY AFTER ISHA",
+    "messageWinter": "TAFSEER OF THE QUR'AN • SURAH HADEED • FRIDAY AFTER ISHA",
     "displayRules": [
       {
         "dayOfWeek": 5,
@@ -98,7 +98,7 @@
       "/static/images/Tafseer of the Quran Isha.jpg"
     ],
     "isSpecial": true,
-    "hide": false,
+    "hide": true,
     "imagesSummer": [
       "/static/images/Tafseer of the Quran Isha.jpg"
     ]
